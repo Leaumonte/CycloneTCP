@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.1.4
+ * @version 2.2.0
  **/
 
 //Switch to the appropriate trace level
@@ -219,19 +219,14 @@ error_t sam9x60Eth2Init(NetInterface *interface)
 }
 
 
-//SAM9X60-EK evaluation board?
-#if defined(USE_SAM9X60_EK)
-
 /**
  * @brief GPIO configuration
  * @param[in] interface Underlying network interface
  **/
 
-void sam9x60Eth2InitGpio(NetInterface *interface)
+__weak_func void sam9x60Eth2InitGpio(NetInterface *interface)
 {
 }
-
-#endif
 
 
 /**
@@ -387,8 +382,8 @@ void sam9x60Eth2IrqHandler(void)
    //This flag will be set if a higher priority task must be woken
    flag = FALSE;
 
-   //Each time the software reads EMAC_ISR, it has to check the
-   //contents of EMAC_TSR, EMAC_RSR and EMAC_NSR
+   //Each time the software reads EMAC_ISR, it has to check the contents
+   //of EMAC_TSR, EMAC_RSR and EMAC_NSR
    isr = EMAC1->EMAC_ISR;
    tsr = EMAC1->EMAC_TSR;
    rsr = EMAC1->EMAC_RSR;

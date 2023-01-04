@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.1.4
+ * @version 2.2.0
  **/
 
 //Switch to the appropriate trace level
@@ -93,7 +93,7 @@ void ndpRouterAdvTick(NdpRouterAdvContext *context)
             //Whenever a multicast advertisement is sent from an interface, the
             //timer is reset to a uniformly distributed random value between
             //MinRtrAdvInterval and MaxRtrAdvInterval
-            context->timeout = netGetRandRange(settings->minRtrAdvInterval,
+            context->timeout = netGenerateRandRange(settings->minRtrAdvInterval,
                settings->maxRtrAdvInterval);
 
             //First Router Advertisements to be sent from this interface?
@@ -136,15 +136,21 @@ void ndpRouterAdvLinkChangeEvent(NdpRouterAdvContext *context)
 
    //Default Hop Limit value
    if(context->settings.curHopLimit != 0)
+   {
       interface->ipv6Context.curHopLimit = context->settings.curHopLimit;
+   }
 
    //The time a node assumes a neighbor is reachable
    if(context->settings.reachableTime != 0)
+   {
       interface->ndpContext.reachableTime = context->settings.reachableTime;
+   }
 
    //The time between retransmissions of NS messages
    if(context->settings.retransTimer != 0)
+   {
       interface->ndpContext.retransTimer = context->settings.retransTimer;
+   }
 }
 
 
@@ -306,7 +312,7 @@ void ndpProcessRouterSol(NetInterface *interface, Ipv6PseudoHeader *pseudoHeader
 
    //Upon receipt of a Router Solicitation, compute a random delay within the
    //range 0 through MAX_RA_DELAY_TIME
-   delay = netGetRandRange(0, NDP_MAX_RA_DELAY_TIME);
+   delay = netGenerateRandRange(0, NDP_MAX_RA_DELAY_TIME);
 
    //If the computed value corresponds to a time later than the time the next
    //multicast Router Advertisement is scheduled to be sent, ignore the random

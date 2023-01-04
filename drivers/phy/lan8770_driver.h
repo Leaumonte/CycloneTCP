@@ -1,6 +1,6 @@
 /**
  * @file lan8770_driver.h
- * @brief LAN8770 Ethernet PHY driver
+ * @brief LAN8770 100Base-T1 Ethernet PHY driver
  *
  * @section License
  *
@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.1.4
+ * @version 2.2.0
  **/
 
 #ifndef _LAN8770_DRIVER_H
@@ -408,6 +408,7 @@ extern const PhyDriver lan8770PhyDriver;
 
 //LAN8770 related functions
 error_t lan8770Init(NetInterface *interface);
+void lan8770InitHook(NetInterface *interface);
 
 void lan8770Tick(NetInterface *interface);
 

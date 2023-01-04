@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.1.4
+ * @version 2.2.0
  **/
 
 //Switch to the appropriate trace level
@@ -96,6 +96,9 @@ error_t rtl8211eInit(NetInterface *interface)
    rtl8211eWritePhyReg(interface, RTL8211E_INER, RTL8211E_INER_AN_COMPLETE |
       RTL8211E_INER_LINK_STATUS);
 
+   //Perform custom configuration
+   rtl8211eInitHook(interface);
+
    //Force the TCP/IP stack to poll the link state at startup
    interface->phyEvent = TRUE;
    //Notify the TCP/IP stack of the event
@@ -103,6 +106,16 @@ error_t rtl8211eInit(NetInterface *interface)
 
    //Successful initialization
    return NO_ERROR;
+}
+
+
+/**
+ * @brief RTL8211E custom configuration
+ * @param[in] interface Underlying network interface
+ **/
+
+__weak_func void rtl8211eInitHook(NetInterface *interface)
+{
 }
 
 
@@ -321,4 +334,58 @@ void rtl8211eDumpPhyReg(NetInterface *interface)
 
    //Terminate with a line feed
    TRACE_DEBUG("\r\n");
+}
+
+
+/**
+ * @brief Write MMD register
+ * @param[in] interface Underlying network interface
+ * @param[in] devAddr Device address
+ * @param[in] regAddr Register address
+ * @param[in] data MMD register value
+ **/
+
+void rtl8211eWriteMmdReg(NetInterface *interface, uint8_t devAddr,
+   uint16_t regAddr, uint16_t data)
+{
+   //Select register operation
+   rtl8211eWritePhyReg(interface, RTL8211E_MMDACR,
+      RTL8211E_MMDACR_FUNC_ADDR | (devAddr & RTL8211E_MMDACR_DEVAD));
+
+   //Write MMD register address
+   rtl8211eWritePhyReg(interface, RTL8211E_MMDAADR, regAddr);
+
+   //Select data operation
+   rtl8211eWritePhyReg(interface, RTL8211E_MMDACR,
+      RTL8211E_MMDACR_FUNC_DATA_NO_POST_INC | (devAddr & RTL8211E_MMDACR_DEVAD));
+
+   //Write the content of the MMD register
+   rtl8211eWritePhyReg(interface, RTL8211E_MMDAADR, data);
+}
+
+
+/**
+ * @brief Read MMD register
+ * @param[in] interface Underlying network interface
+ * @param[in] devAddr Device address
+ * @param[in] regAddr Register address
+ * @return MMD register value
+ **/
+
+uint16_t rtl8211eReadMmdReg(NetInterface *interface, uint8_t devAddr,
+   uint16_t regAddr)
+{
+   //Select register operation
+   rtl8211eWritePhyReg(interface, RTL8211E_MMDACR,
+      RTL8211E_MMDACR_FUNC_ADDR | (devAddr & RTL8211E_MMDACR_DEVAD));
+
+   //Write MMD register address
+   rtl8211eWritePhyReg(interface, RTL8211E_MMDAADR, regAddr);
+
+   //Select data operation
+   rtl8211eWritePhyReg(interface, RTL8211E_MMDACR,
+      RTL8211E_MMDACR_FUNC_DATA_NO_POST_INC | (devAddr & RTL8211E_MMDACR_DEVAD));
+
+   //Read the content of the MMD register
+   return rtl8211eReadPhyReg(interface, RTL8211E_MMDAADR);
 }

@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.1.4
+ * @version 2.2.0
  **/
 
 //Switch to the appropriate trace level
@@ -108,6 +108,9 @@ error_t ksz8061Init(NetInterface *interface)
    ksz8061WritePhyReg(interface, KSZ8061_ICSR, KSZ8061_ICSR_LINK_DOWN_IE |
       KSZ8061_ICSR_LINK_UP_IE);
 
+   //Perform custom configuration
+   ksz8061InitHook(interface);
+
    //Force the TCP/IP stack to poll the link state at startup
    interface->phyEvent = TRUE;
    //Notify the TCP/IP stack of the event
@@ -115,6 +118,16 @@ error_t ksz8061Init(NetInterface *interface)
 
    //Successful initialization
    return NO_ERROR;
+}
+
+
+/**
+ * @brief KSZ8061 custom configuration
+ * @param[in] interface Underlying network interface
+ **/
+
+__weak_func void ksz8061InitHook(NetInterface *interface)
+{
 }
 
 
@@ -220,21 +233,25 @@ void ksz8061EventHandler(NetInterface *interface)
             interface->linkSpeed = NIC_LINK_SPEED_10MBPS;
             interface->duplexMode = NIC_HALF_DUPLEX_MODE;
             break;
+
          //10BASE-T full-duplex
          case KSZ8061_PHYCON1_OP_MODE_10BT_FD:
             interface->linkSpeed = NIC_LINK_SPEED_10MBPS;
             interface->duplexMode = NIC_FULL_DUPLEX_MODE;
             break;
+
          //100BASE-TX half-duplex
          case KSZ8061_PHYCON1_OP_MODE_100BTX_HD:
             interface->linkSpeed = NIC_LINK_SPEED_100MBPS;
             interface->duplexMode = NIC_HALF_DUPLEX_MODE;
             break;
+
          //100BASE-TX full-duplex
          case KSZ8061_PHYCON1_OP_MODE_100BTX_FD:
             interface->linkSpeed = NIC_LINK_SPEED_100MBPS;
             interface->duplexMode = NIC_FULL_DUPLEX_MODE;
             break;
+
          //Unknown operation mode
          default:
             //Debug message
@@ -331,4 +348,58 @@ void ksz8061DumpPhyReg(NetInterface *interface)
 
    //Terminate with a line feed
    TRACE_DEBUG("\r\n");
+}
+
+
+/**
+ * @brief Write MMD register
+ * @param[in] interface Underlying network interface
+ * @param[in] devAddr Device address
+ * @param[in] regAddr Register address
+ * @param[in] data MMD register value
+ **/
+
+void ksz8061WriteMmdReg(NetInterface *interface, uint8_t devAddr,
+   uint16_t regAddr, uint16_t data)
+{
+   //Select register operation
+   ksz8061WritePhyReg(interface, KSZ8061_MMDACR,
+      KSZ8061_MMDACR_FUNC_ADDR | (devAddr & KSZ8061_MMDACR_DEVAD));
+
+   //Write MMD register address
+   ksz8061WritePhyReg(interface, KSZ8061_MMDAADR, regAddr);
+
+   //Select data operation
+   ksz8061WritePhyReg(interface, KSZ8061_MMDACR,
+      KSZ8061_MMDACR_FUNC_DATA_NO_POST_INC | (devAddr & KSZ8061_MMDACR_DEVAD));
+
+   //Write the content of the MMD register
+   ksz8061WritePhyReg(interface, KSZ8061_MMDAADR, data);
+}
+
+
+/**
+ * @brief Read MMD register
+ * @param[in] interface Underlying network interface
+ * @param[in] devAddr Device address
+ * @param[in] regAddr Register address
+ * @return MMD register value
+ **/
+
+uint16_t ksz8061ReadMmdReg(NetInterface *interface, uint8_t devAddr,
+   uint16_t regAddr)
+{
+   //Select register operation
+   ksz8061WritePhyReg(interface, KSZ8061_MMDACR,
+      KSZ8061_MMDACR_FUNC_ADDR | (devAddr & KSZ8061_MMDACR_DEVAD));
+
+   //Write MMD register address
+   ksz8061WritePhyReg(interface, KSZ8061_MMDAADR, regAddr);
+
+   //Select data operation
+   ksz8061WritePhyReg(interface, KSZ8061_MMDACR,
+      KSZ8061_MMDACR_FUNC_DATA_NO_POST_INC | (devAddr & KSZ8061_MMDACR_DEVAD));
+
+   //Read the content of the MMD register
+   return ksz8061ReadPhyReg(interface, KSZ8061_MMDAADR);
 }

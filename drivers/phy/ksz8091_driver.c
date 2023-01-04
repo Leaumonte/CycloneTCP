@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.1.4
+ * @version 2.2.0
  **/
 
 //Switch to the appropriate trace level
@@ -96,6 +96,9 @@ error_t ksz8091Init(NetInterface *interface)
    ksz8091WritePhyReg(interface, KSZ8091_ICSR, KSZ8091_ICSR_LINK_DOWN_IE |
       KSZ8091_ICSR_LINK_UP_IE);
 
+   //Perform custom configuration
+   ksz8091InitHook(interface);
+
    //Force the TCP/IP stack to poll the link state at startup
    interface->phyEvent = TRUE;
    //Notify the TCP/IP stack of the event
@@ -103,6 +106,16 @@ error_t ksz8091Init(NetInterface *interface)
 
    //Successful initialization
    return NO_ERROR;
+}
+
+
+/**
+ * @brief KSZ8091 custom configuration
+ * @param[in] interface Underlying network interface
+ **/
+
+__weak_func void ksz8091InitHook(NetInterface *interface)
+{
 }
 
 
@@ -208,21 +221,25 @@ void ksz8091EventHandler(NetInterface *interface)
             interface->linkSpeed = NIC_LINK_SPEED_10MBPS;
             interface->duplexMode = NIC_HALF_DUPLEX_MODE;
             break;
+
          //10BASE-T full-duplex
          case KSZ8091_PHYCON1_OP_MODE_10BT_FD:
             interface->linkSpeed = NIC_LINK_SPEED_10MBPS;
             interface->duplexMode = NIC_FULL_DUPLEX_MODE;
             break;
+
          //100BASE-TX half-duplex
          case KSZ8091_PHYCON1_OP_MODE_100BTX_HD:
             interface->linkSpeed = NIC_LINK_SPEED_100MBPS;
             interface->duplexMode = NIC_HALF_DUPLEX_MODE;
             break;
+
          //100BASE-TX full-duplex
          case KSZ8091_PHYCON1_OP_MODE_100BTX_FD:
             interface->linkSpeed = NIC_LINK_SPEED_100MBPS;
             interface->duplexMode = NIC_FULL_DUPLEX_MODE;
             break;
+
          //Unknown operation mode
          default:
             //Debug message

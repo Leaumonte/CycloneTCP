@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.1.4
+ * @version 2.2.0
  **/
 
 //Switch to the appropriate trace level
@@ -84,7 +84,7 @@ error_t dnsResolve(NetInterface *interface, const char_t *name,
       }
       else
       {
-         //Host name resolution is in progress...
+         //Host name resolution is in progress
          error = ERROR_IN_PROGRESS;
       }
    }
@@ -108,7 +108,7 @@ error_t dnsResolve(NetInterface *interface, const char_t *name,
 
       //An identifier is used by the DNS client to match replies
       //with corresponding requests
-      entry->id = (uint16_t) netGetRand();
+      entry->id = (uint16_t) netGenerateRand();
 
       //Callback function to be called when a DNS response is received
       error = udpAttachRxCallback(interface, entry->port, dnsProcessResponse,

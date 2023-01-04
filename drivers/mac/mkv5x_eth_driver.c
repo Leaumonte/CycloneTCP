@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.1.4
+ * @version 2.2.0
  **/
 
 //Switch to the appropriate trace level
@@ -237,16 +237,15 @@ error_t mkv5xEthInit(NetInterface *interface)
 }
 
 
-//TWR-KV58F220M evaluation board?
-#if defined(USE_TWR_KV58F220M)
-
 /**
  * @brief GPIO configuration
  * @param[in] interface Underlying network interface
  **/
 
-void mkv5xEthInitGpio(NetInterface *interface)
+__weak_func void mkv5xEthInitGpio(NetInterface *interface)
 {
+//TWR-KV58F220M evaluation board?
+#if defined(USE_TWR_KV58F220M)
    //Enable PORTA peripheral clock
    SIM->SCGC5 |= SIM_SCGC5_PORTA_MASK;
 
@@ -284,9 +283,8 @@ void mkv5xEthInitGpio(NetInterface *interface)
    PORTA->PCR[27] = PORT_PCR_MUX(5);
    //Configure MII0_COL (PTA29)
    PORTA->PCR[29] = PORT_PCR_MUX(5);
-}
-
 #endif
+}
 
 
 /**
@@ -1002,6 +1000,7 @@ uint32_t mkv5xEthCalcCrc(const void *data, size_t length)
    {
       //Update CRC value
       crc ^= p[i];
+
       //The message is processed bit by bit
       for(j = 0; j < 8; j++)
       {

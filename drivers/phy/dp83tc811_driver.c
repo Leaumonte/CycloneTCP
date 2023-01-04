@@ -1,6 +1,6 @@
 /**
  * @file dp83tc811_driver.c
- * @brief DP83TC811 Ethernet PHY driver
+ * @brief DP83TC811 100Base-T1 Ethernet PHY driver
  *
  * @section License
  *
@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.1.4
+ * @version 2.2.0
  **/
 
 //Switch to the appropriate trace level
@@ -92,6 +92,9 @@ error_t dp83tc811Init(NetInterface *interface)
    //Dump PHY registers for debugging purpose
    dp83tc811DumpPhyReg(interface);
 
+   //Perform custom configuration
+   dp83tc811InitHook(interface);
+
    //Force the TCP/IP stack to poll the link state at startup
    interface->phyEvent = TRUE;
    //Notify the TCP/IP stack of the event
@@ -99,6 +102,16 @@ error_t dp83tc811Init(NetInterface *interface)
 
    //Successful initialization
    return NO_ERROR;
+}
+
+
+/**
+ * @brief DP83TC811 custom configuration
+ * @param[in] interface Underlying network interface
+ **/
+
+__weak_func void dp83tc811InitHook(NetInterface *interface)
+{
 }
 
 
@@ -185,9 +198,11 @@ void dp83tc811EventHandler(NetInterface *interface)
    //Link is up?
    if((value & DP83TC811_BMSR_LINK_STATUS) != 0)
    {
-      //Adjust MAC configuration parameters for proper operation
+      //The PHY is only able to operate in 100 Mbps mode
       interface->linkSpeed = NIC_LINK_SPEED_100MBPS;
       interface->duplexMode = NIC_FULL_DUPLEX_MODE;
+
+      //Adjust MAC configuration parameters for proper operation
       interface->nicDriver->updateMacConfig(interface);
 
       //Update link state

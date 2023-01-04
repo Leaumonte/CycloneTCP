@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.1.4
+ * @version 2.2.0
  **/
 
 //Switch to the appropriate trace level
@@ -194,7 +194,7 @@ error_t s7g2Eth2Init(NetInterface *interface)
    NVIC_SetPriorityGrouping(S7G2_ETH2_IRQ_PRIORITY_GROUPING);
 
    //Configure EDMAC interrupt priority
-   NVIC_SetPriority(ETHER_EINT1_IRQn, NVIC_EncodePriority(S7G2_ETH2_IRQ_PRIORITY_GROUPING,
+   NVIC_SetPriority(EDMAC1_EINT_IRQn, NVIC_EncodePriority(S7G2_ETH2_IRQ_PRIORITY_GROUPING,
       S7G2_ETH2_IRQ_GROUP_PRIORITY, S7G2_ETH2_IRQ_SUB_PRIORITY));
 
    //Enable transmission and reception
@@ -211,16 +211,15 @@ error_t s7g2Eth2Init(NetInterface *interface)
 }
 
 
-//DK-S7G2 or SK-S7G2 evaluation board?
-#if defined(USE_DK_S7G2) || defined(USE_SK_S7G2)
-
 /**
  * @brief GPIO configuration
  * @param[in] interface Underlying network interface
  **/
 
-void s7g2Eth2InitGpio(NetInterface *interface)
+__weak_func void s7g2Eth2InitGpio(NetInterface *interface)
 {
+//DK-S7G2 or SK-S7G2 evaluation board?
+#if defined(USE_DK_S7G2) || defined(USE_SK_S7G2)
    //Disable protection
    R_SYSTEM->PRCR = 0xA50B;
 
@@ -292,9 +291,8 @@ void s7g2Eth2InitGpio(NetInterface *interface)
    //Lock PFS registers
    R_PMISC->PWPR_b.PFSWE = 0;
    R_PMISC->PWPR_b.BOWI = 1;
-}
-
 #endif
+}
 
 
 /**
@@ -386,7 +384,7 @@ void s7g2Eth2Tick(NetInterface *interface)
 void s7g2Eth2EnableIrq(NetInterface *interface)
 {
    //Enable Ethernet MAC interrupts
-   NVIC_EnableIRQ(ETHER_EINT1_IRQn);
+   NVIC_EnableIRQ(EDMAC1_EINT_IRQn);
 
    //Valid Ethernet PHY or switch driver?
    if(interface->phyDriver != NULL)
@@ -414,7 +412,7 @@ void s7g2Eth2EnableIrq(NetInterface *interface)
 void s7g2Eth2DisableIrq(NetInterface *interface)
 {
    //Disable Ethernet MAC interrupts
-   NVIC_DisableIRQ(ETHER_EINT1_IRQn);
+   NVIC_DisableIRQ(EDMAC1_EINT_IRQn);
 
    //Valid Ethernet PHY or switch driver?
    if(interface->phyDriver != NULL)
@@ -438,7 +436,7 @@ void s7g2Eth2DisableIrq(NetInterface *interface)
  * @brief S7G2 Ethernet MAC interrupt service routine
  **/
 
-void ETHER_EINT1_IRQHandler(void)
+void EDMAC1_EINT_IRQHandler(void)
 {
    bool_t flag;
    uint32_t status;
@@ -479,7 +477,7 @@ void ETHER_EINT1_IRQHandler(void)
    }
 
    //Clear IR flag
-   R_ICU->IELSRn_b[ETHER_EINT1_IRQn].IR = 0;
+   R_ICU->IELSRn_b[EDMAC1_EINT_IRQn].IR = 0;
 
    //Interrupt service routine epilogue
    osExitIsr(flag);

@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.1.4
+ * @version 2.2.0
  **/
 
 //Switch to the appropriate trace level
@@ -89,6 +89,9 @@ error_t ar8031Init(NetInterface *interface)
    {
    }
 
+   //Dump PHY registers for debugging purpose
+   ar8031DumpPhyReg(interface);
+
    //Chip configuration register
    ar8031WritePhyReg(interface, AR8031_CHIP_CONF,
       AR8031_CHIP_CONF_BT_BX_REG_SEL | AR8031_CHIP_CONF_PRIORITY_SEL);
@@ -111,12 +114,12 @@ error_t ar8031Init(NetInterface *interface)
       AR8031_FUNC_CTRL_ASSERT_CRS_ON_TX | AR8031_FUNC_CTRL_MDIX_MODE_AUTO |
       AR8031_FUNC_CTRL_POLARITY_REVERSAL);
 
-   //Dump PHY registers for debugging purpose
-   ar8031DumpPhyReg(interface);
-
    //The PHY will generate interrupts when link status changes are detected
    ar8031WritePhyReg(interface, AR8031_INT_EN, AR8031_INT_STATUS_LINK_FAIL |
       AR8031_INT_STATUS_LINK_SUCCESS);
+
+   //Perform custom configuration
+   ar8031InitHook(interface);
 
    //Force the TCP/IP stack to poll the link state at startup
    interface->phyEvent = TRUE;
@@ -125,6 +128,16 @@ error_t ar8031Init(NetInterface *interface)
 
    //Successful initialization
    return NO_ERROR;
+}
+
+
+/**
+ * @brief AR8031 custom configuration
+ * @param[in] interface Underlying network interface
+ **/
+
+__weak_func void ar8031InitHook(NetInterface *interface)
+{
 }
 
 
@@ -338,4 +351,58 @@ void ar8031DumpPhyReg(NetInterface *interface)
 
    //Terminate with a line feed
    TRACE_DEBUG("\r\n");
+}
+
+
+/**
+ * @brief Write MMD register
+ * @param[in] interface Underlying network interface
+ * @param[in] devAddr Device address
+ * @param[in] regAddr Register address
+ * @param[in] data MMD register value
+ **/
+
+void ar8031WriteMmdReg(NetInterface *interface, uint8_t devAddr,
+   uint16_t regAddr, uint16_t data)
+{
+   //Select register operation
+   ar8031WritePhyReg(interface, AR8031_MMDACR,
+      AR8031_MMDACR_FUNC_ADDR | (devAddr & AR8031_MMDACR_DEVAD));
+
+   //Write MMD register address
+   ar8031WritePhyReg(interface, AR8031_MMDAADR, regAddr);
+
+   //Select data operation
+   ar8031WritePhyReg(interface, AR8031_MMDACR,
+      AR8031_MMDACR_FUNC_DATA_NO_POST_INC | (devAddr & AR8031_MMDACR_DEVAD));
+
+   //Write the content of the MMD register
+   ar8031WritePhyReg(interface, AR8031_MMDAADR, data);
+}
+
+
+/**
+ * @brief Read MMD register
+ * @param[in] interface Underlying network interface
+ * @param[in] devAddr Device address
+ * @param[in] regAddr Register address
+ * @return MMD register value
+ **/
+
+uint16_t ar8031ReadMmdReg(NetInterface *interface, uint8_t devAddr,
+   uint16_t regAddr)
+{
+   //Select register operation
+   ar8031WritePhyReg(interface, AR8031_MMDACR,
+      AR8031_MMDACR_FUNC_ADDR | (devAddr & AR8031_MMDACR_DEVAD));
+
+   //Write MMD register address
+   ar8031WritePhyReg(interface, AR8031_MMDAADR, regAddr);
+
+   //Select data operation
+   ar8031WritePhyReg(interface, AR8031_MMDACR,
+      AR8031_MMDACR_FUNC_DATA_NO_POST_INC | (devAddr & AR8031_MMDACR_DEVAD));
+
+   //Read the content of the MMD register
+   return ar8031ReadPhyReg(interface, AR8031_MMDAADR);
 }

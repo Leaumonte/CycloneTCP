@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.1.4
+ * @version 2.2.0
  **/
 
 //Switch to the appropriate trace level
@@ -96,6 +96,9 @@ error_t ksz9131Init(NetInterface *interface)
    ksz9131WritePhyReg(interface, KSZ9131_ICSR, KSZ9131_ICSR_LINK_DOWN_IE |
       KSZ9131_ICSR_LINK_UP_IE);
 
+   //Perform custom configuration
+   ksz9131InitHook(interface);
+
    //Force the TCP/IP stack to poll the link state at startup
    interface->phyEvent = TRUE;
    //Notify the TCP/IP stack of the event
@@ -103,6 +106,16 @@ error_t ksz9131Init(NetInterface *interface)
 
    //Successful initialization
    return NO_ERROR;
+}
+
+
+/**
+ * @brief KSZ9131 custom configuration
+ * @param[in] interface Underlying network interface
+ **/
+
+__weak_func void ksz9131InitHook(NetInterface *interface)
+{
 }
 
 
@@ -321,4 +334,58 @@ void ksz9131DumpPhyReg(NetInterface *interface)
 
    //Terminate with a line feed
    TRACE_DEBUG("\r\n");
+}
+
+
+/**
+ * @brief Write MMD register
+ * @param[in] interface Underlying network interface
+ * @param[in] devAddr Device address
+ * @param[in] regAddr Register address
+ * @param[in] data MMD register value
+ **/
+
+void ksz9131WriteMmdReg(NetInterface *interface, uint8_t devAddr,
+   uint16_t regAddr, uint16_t data)
+{
+   //Select register operation
+   ksz9131WritePhyReg(interface, KSZ9131_MMDACR,
+      KSZ9131_MMDACR_FUNC_ADDR | (devAddr & KSZ9131_MMDACR_DEVAD));
+
+   //Write MMD register address
+   ksz9131WritePhyReg(interface, KSZ9131_MMDAADR, regAddr);
+
+   //Select data operation
+   ksz9131WritePhyReg(interface, KSZ9131_MMDACR,
+      KSZ9131_MMDACR_FUNC_DATA_NO_POST_INC | (devAddr & KSZ9131_MMDACR_DEVAD));
+
+   //Write the content of the MMD register
+   ksz9131WritePhyReg(interface, KSZ9131_MMDAADR, data);
+}
+
+
+/**
+ * @brief Read MMD register
+ * @param[in] interface Underlying network interface
+ * @param[in] devAddr Device address
+ * @param[in] regAddr Register address
+ * @return MMD register value
+ **/
+
+uint16_t ksz9131ReadMmdReg(NetInterface *interface, uint8_t devAddr,
+   uint16_t regAddr)
+{
+   //Select register operation
+   ksz9131WritePhyReg(interface, KSZ9131_MMDACR,
+      KSZ9131_MMDACR_FUNC_ADDR | (devAddr & KSZ9131_MMDACR_DEVAD));
+
+   //Write MMD register address
+   ksz9131WritePhyReg(interface, KSZ9131_MMDAADR, regAddr);
+
+   //Select data operation
+   ksz9131WritePhyReg(interface, KSZ9131_MMDACR,
+      KSZ9131_MMDACR_FUNC_DATA_NO_POST_INC | (devAddr & KSZ9131_MMDACR_DEVAD));
+
+   //Read the content of the MMD register
+   return ksz9131ReadPhyReg(interface, KSZ9131_MMDAADR);
 }

@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.1.4
+ * @version 2.2.0
  **/
 
 //Switch to the appropriate trace level
@@ -84,9 +84,9 @@ void autoIpTick(AutoIpContext *context)
          //Configure subnet mask
          interface->ipv4Context.addrList[i].subnetMask = AUTO_IP_MASK;
 
-         //The address must be in the range from 169.54.1.0 to 169.254.254.255
-         if(ntohl(context->linkLocalAddr) < ntohl(AUTO_IP_ADDR_MIN) ||
-            ntohl(context->linkLocalAddr) > ntohl(AUTO_IP_ADDR_MAX))
+         //The address must be in the range from 169.254.1.0 to 169.254.254.255
+         if(ntohl(context->linkLocalAddr) < NTOHL(AUTO_IP_ADDR_MIN) ||
+            ntohl(context->linkLocalAddr) > NTOHL(AUTO_IP_ADDR_MAX))
          {
             //Generate a random link-local address
             autoIpGenerateAddr(&context->linkLocalAddr);
@@ -100,7 +100,7 @@ void autoIpTick(AutoIpContext *context)
          interface->ipv4Context.addrList[i].conflict = FALSE;
 
          //Initial random delay
-         delay = netGetRandRange(0, AUTO_IP_PROBE_WAIT);
+         delay = netGenerateRandRange(0, AUTO_IP_PROBE_WAIT);
 
          //Check whether the number of conflicts exceeds the maximum acceptable
          //value
@@ -157,7 +157,7 @@ void autoIpTick(AutoIpContext *context)
                else
                {
                   //Maximum delay till repeated probe
-                  context->timeout = netGetRandRange(AUTO_IP_PROBE_MIN,
+                  context->timeout = netGenerateRandRange(AUTO_IP_PROBE_MIN,
                      AUTO_IP_PROBE_MAX);
                }
             }
@@ -315,8 +315,8 @@ void autoIpLinkChangeEvent(AutoIpContext *context)
  * @param[in] delay Initial delay
  **/
 
-void autoIpChangeState(AutoIpContext *context,
-   AutoIpState newState, systime_t delay)
+void autoIpChangeState(AutoIpContext *context, AutoIpState newState,
+   systime_t delay)
 {
    NetInterface *interface;
 
@@ -355,8 +355,8 @@ void autoIpGenerateAddr(Ipv4Addr *ipAddr)
    uint32_t n;
 
    //Generate a random address in the range from 169.254.1.0 to 169.254.254.255
-   n = netGetRand() % ntohl(AUTO_IP_ADDR_MAX - AUTO_IP_ADDR_MIN);
-   n += ntohl(AUTO_IP_ADDR_MIN);
+   n = netGenerateRand() % (NTOHL(AUTO_IP_ADDR_MAX - AUTO_IP_ADDR_MIN) + 1);
+   n += NTOHL(AUTO_IP_ADDR_MIN);
 
    //Convert the resulting address to network byte order
    *ipAddr = htonl(n);

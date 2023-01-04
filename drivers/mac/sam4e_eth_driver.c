@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.1.4
+ * @version 2.2.0
  **/
 
 //Switch to the appropriate trace level
@@ -212,16 +212,15 @@ error_t sam4eEthInit(NetInterface *interface)
 }
 
 
-//SAM4E-EK or SAM4E-Xplained-Pro evaluation board?
-#if defined(USE_SAM4E_EK) || defined(USE_SAM4E_XPLAINED_PRO)
-
 /**
  * @brief GPIO configuration
  * @param[in] interface Underlying network interface
  **/
 
-void sam4eEthInitGpio(NetInterface *interface)
+__weak_func void sam4eEthInitGpio(NetInterface *interface)
 {
+//SAM4E-EK or SAM4E-Xplained-Pro evaluation board?
+#if defined(USE_SAM4E_EK) || defined(USE_SAM4E_XPLAINED_PRO)
    //Enable PIO peripheral clock
    PMC->PMC_PCER0 = (1 << ID_PIOD);
 
@@ -237,9 +236,8 @@ void sam4eEthInitGpio(NetInterface *interface)
 
    //Select MII operation mode
    GMAC->GMAC_UR = GMAC_UR_RMIIMII;
-}
-
 #endif
+}
 
 
 /**
@@ -393,8 +391,8 @@ void GMAC_Handler(void)
    //This flag will be set if a higher priority task must be woken
    flag = FALSE;
 
-   //Each time the software reads GMAC_ISR, it has to check the
-   //contents of GMAC_TSR, GMAC_RSR and GMAC_NSR
+   //Each time the software reads GMAC_ISR, it has to check the contents
+   //of GMAC_TSR, GMAC_RSR and GMAC_NSR
    isr = GMAC->GMAC_ISR;
    tsr = GMAC->GMAC_TSR;
    rsr = GMAC->GMAC_RSR;

@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.1.4
+ * @version 2.2.0
  **/
 
 //Switch to the appropriate trace level
@@ -115,6 +115,7 @@ const NicDriver stm32mp1xxEthDriver =
 error_t stm32mp1xxEthInit(NetInterface *interface)
 {
    error_t error;
+   uint32_t temp;
 
    //Debug message
    TRACE_INFO("Initializing STM32MP1 Ethernet MAC...\r\n");
@@ -168,7 +169,11 @@ error_t stm32mp1xxEthInit(NetInterface *interface)
    }
 
    //Use default MAC configuration
-   ETH->MACCR = ETH_MACCR_DO;
+   ETH->MACCR = ETH_MACCR_GPSLCE | ETH_MACCR_DO;
+
+   //Set the maximum packet size that can be accepted
+   temp = ETH->MACECR & ~ETH_MACECR_GPSL;
+   ETH->MACECR = temp | STM32MP1XX_ETH_RX_BUFFER_SIZE;
 
    //Configure MAC address filtering
    stm32mp1xxEthUpdateMacAddrFilter(interface);
@@ -241,20 +246,17 @@ error_t stm32mp1xxEthInit(NetInterface *interface)
 }
 
 
-//STM32MP157A-EV1 or STM32MP157C-DK2 evaluation board?
-#if defined(USE_STM32MP15XX_EVAL) || defined(USE_STM32MP15XX_DISCO)
-
 /**
  * @brief GPIO configuration
  * @param[in] interface Underlying network interface
  **/
 
-void stm32mp1xxEthInitGpio(NetInterface *interface)
+__weak_func void stm32mp1xxEthInitGpio(NetInterface *interface)
 {
-   GPIO_InitTypeDef GPIO_InitStructure;
-
 //STM32MP157A-EV1 evaluation board?
 #if defined(USE_STM32MP15XX_EVAL)
+   GPIO_InitTypeDef GPIO_InitStructure;
+
    //Enable SYSCFG clock
    __HAL_RCC_SYSCFG_CLK_ENABLE();
 
@@ -311,8 +313,11 @@ void stm32mp1xxEthInitGpio(NetInterface *interface)
    //sleep(10);
    //HAL_GPIO_WritePin(GPIOD, GPIO_PIN_10, GPIO_PIN_SET);
    //sleep(10);
+
 //STM32MP157C-DK2 evaluation board?
 #elif defined(USE_STM32MP15XX_DISCO)
+   GPIO_InitTypeDef GPIO_InitStructure;
+
    //Enable SYSCFG clock
    __HAL_RCC_SYSCFG_CLK_ENABLE();
 
@@ -370,8 +375,6 @@ void stm32mp1xxEthInitGpio(NetInterface *interface)
    sleep(10);
 #endif
 }
-
-#endif
 
 
 /**
