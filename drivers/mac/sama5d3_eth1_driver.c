@@ -1,12 +1,12 @@
 /**
- * @file sama5d3_eth_driver.c
+ * @file sama5d3_eth1_driver.c
  * @brief SAMA5D3 Ethernet MAC driver (EMAC instance)
  *
  * @section License
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  *
- * Copyright (C) 2010-2023 Oryx Embedded SARL. All rights reserved.
+ * Copyright (C) 2010-2024 Oryx Embedded SARL. All rights reserved.
  *
  * This file is part of CycloneTCP Open.
  *
@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.2.2
+ * @version 2.4.0
  **/
 
 //Switch to the appropriate trace level
@@ -35,7 +35,7 @@
 #include <limits.h>
 #include "sama5d3x.h"
 #include "core/net.h"
-#include "drivers/mac/sama5d3_eth_driver.h"
+#include "drivers/mac/sama5d3_eth1_driver.h"
 #include "debug.h"
 
 //Underlying network interface
@@ -46,36 +46,36 @@ static NetInterface *nicDriverInterface;
 
 //TX buffer
 #pragma data_alignment = 8
-#pragma location = SAMA5D3_ETH_RAM_SECTION
-static uint8_t txBuffer[SAMA5D3_ETH_TX_BUFFER_COUNT][SAMA5D3_ETH_TX_BUFFER_SIZE];
+#pragma location = SAMA5D3_ETH1_RAM_SECTION
+static uint8_t txBuffer[SAMA5D3_ETH1_TX_BUFFER_COUNT][SAMA5D3_ETH1_TX_BUFFER_SIZE];
 //RX buffer
 #pragma data_alignment = 8
-#pragma location = SAMA5D3_ETH_RAM_SECTION
-static uint8_t rxBuffer[SAMA5D3_ETH_RX_BUFFER_COUNT][SAMA5D3_ETH_RX_BUFFER_SIZE];
+#pragma location = SAMA5D3_ETH1_RAM_SECTION
+static uint8_t rxBuffer[SAMA5D3_ETH1_RX_BUFFER_COUNT][SAMA5D3_ETH1_RX_BUFFER_SIZE];
 //TX buffer descriptors
 #pragma data_alignment = 8
-#pragma location = SAMA5D3_ETH_RAM_SECTION
-static Sama5d3EthTxBufferDesc txBufferDesc[SAMA5D3_ETH_TX_BUFFER_COUNT];
+#pragma location = SAMA5D3_ETH1_RAM_SECTION
+static Sama5d3Eth1TxBufferDesc txBufferDesc[SAMA5D3_ETH1_TX_BUFFER_COUNT];
 //RX buffer descriptors
 #pragma data_alignment = 8
-#pragma location = SAMA5D3_ETH_RAM_SECTION
-static Sama5d3EthRxBufferDesc rxBufferDesc[SAMA5D3_ETH_RX_BUFFER_COUNT];
+#pragma location = SAMA5D3_ETH1_RAM_SECTION
+static Sama5d3Eth1RxBufferDesc rxBufferDesc[SAMA5D3_ETH1_RX_BUFFER_COUNT];
 
 //GCC compiler?
 #else
 
 //TX buffer
-static uint8_t txBuffer[SAMA5D3_ETH_TX_BUFFER_COUNT][SAMA5D3_ETH_TX_BUFFER_SIZE]
-   __attribute__((aligned(8), __section__(SAMA5D3_ETH_RAM_SECTION)));
+static uint8_t txBuffer[SAMA5D3_ETH1_TX_BUFFER_COUNT][SAMA5D3_ETH1_TX_BUFFER_SIZE]
+   __attribute__((aligned(8), __section__(SAMA5D3_ETH1_RAM_SECTION)));
 //RX buffer
-static uint8_t rxBuffer[SAMA5D3_ETH_RX_BUFFER_COUNT][SAMA5D3_ETH_RX_BUFFER_SIZE]
-   __attribute__((aligned(8), __section__(SAMA5D3_ETH_RAM_SECTION)));
+static uint8_t rxBuffer[SAMA5D3_ETH1_RX_BUFFER_COUNT][SAMA5D3_ETH1_RX_BUFFER_SIZE]
+   __attribute__((aligned(8), __section__(SAMA5D3_ETH1_RAM_SECTION)));
 //TX buffer descriptors
-static Sama5d3EthTxBufferDesc txBufferDesc[SAMA5D3_ETH_TX_BUFFER_COUNT]
-   __attribute__((aligned(8), __section__(SAMA5D3_ETH_RAM_SECTION)));
+static Sama5d3Eth1TxBufferDesc txBufferDesc[SAMA5D3_ETH1_TX_BUFFER_COUNT]
+   __attribute__((aligned(8), __section__(SAMA5D3_ETH1_RAM_SECTION)));
 //RX buffer descriptors
-static Sama5d3EthRxBufferDesc rxBufferDesc[SAMA5D3_ETH_RX_BUFFER_COUNT]
-   __attribute__((aligned(8), __section__(SAMA5D3_ETH_RAM_SECTION)));
+static Sama5d3Eth1RxBufferDesc rxBufferDesc[SAMA5D3_ETH1_RX_BUFFER_COUNT]
+   __attribute__((aligned(8), __section__(SAMA5D3_ETH1_RAM_SECTION)));
 
 #endif
 
@@ -89,20 +89,20 @@ static uint_t rxBufferIndex;
  * @brief SAMA5D3 Ethernet MAC driver (EMAC instance)
  **/
 
-const NicDriver sama5d3EthDriver =
+const NicDriver sama5d3Eth1Driver =
 {
    NIC_TYPE_ETHERNET,
    ETH_MTU,
-   sama5d3EthInit,
-   sama5d3EthTick,
-   sama5d3EthEnableIrq,
-   sama5d3EthDisableIrq,
-   sama5d3EthEventHandler,
-   sama5d3EthSendPacket,
-   sama5d3EthUpdateMacAddrFilter,
-   sama5d3EthUpdateMacConfig,
-   sama5d3EthWritePhyReg,
-   sama5d3EthReadPhyReg,
+   sama5d3Eth1Init,
+   sama5d3Eth1Tick,
+   sama5d3Eth1EnableIrq,
+   sama5d3Eth1DisableIrq,
+   sama5d3Eth1EventHandler,
+   sama5d3Eth1SendPacket,
+   sama5d3Eth1UpdateMacAddrFilter,
+   sama5d3Eth1UpdateMacConfig,
+   sama5d3Eth1WritePhyReg,
+   sama5d3Eth1ReadPhyReg,
    TRUE,
    TRUE,
    TRUE,
@@ -116,7 +116,7 @@ const NicDriver sama5d3EthDriver =
  * @return Error code
  **/
 
-error_t sama5d3EthInit(NetInterface *interface)
+error_t sama5d3Eth1Init(NetInterface *interface)
 {
    error_t error;
    volatile uint32_t status;
@@ -136,7 +136,7 @@ error_t sama5d3EthInit(NetInterface *interface)
    EMAC->EMAC_NCR = 0;
 
    //GPIO configuration
-   sama5d3EthInitGpio(interface);
+   sama5d3Eth1InitGpio(interface);
 
    //Configure MDC clock speed
    EMAC->EMAC_NCFGR = EMAC_NCFGR_CLK_MCK_64;
@@ -183,27 +183,30 @@ error_t sama5d3EthInit(NetInterface *interface)
    EMAC->EMAC_NCFGR |= EMAC_NCFGR_BIG | EMAC_NCFGR_MTI;
 
    //Initialize buffer descriptors
-   sama5d3EthInitBufferDesc(interface);
+   sama5d3Eth1InitBufferDesc(interface);
 
    //Clear transmit status register
    EMAC->EMAC_TSR = EMAC_TSR_UND | EMAC_TSR_COMP | EMAC_TSR_BEX |
       EMAC_TSR_TGO | EMAC_TSR_RLES | EMAC_TSR_COL | EMAC_TSR_UBR;
+
    //Clear receive status register
    EMAC->EMAC_RSR = EMAC_RSR_OVR | EMAC_RSR_REC | EMAC_RSR_BNA;
 
    //First disable all EMAC interrupts
    EMAC->EMAC_IDR = 0xFFFFFFFF;
+
    //Only the desired ones are enabled
    EMAC->EMAC_IER = EMAC_IER_ROVR | EMAC_IER_TCOMP | EMAC_IER_TXERR |
       EMAC_IER_RLE | EMAC_IER_TUND | EMAC_IER_RXUBR | EMAC_IER_RCOMP;
 
-   //Read EMAC ISR register to clear any pending interrupt
+   //Read EMAC_ISR register to clear any pending interrupt
    status = EMAC->EMAC_ISR;
+   (void) status;
 
    //Configure interrupt controller
    AIC->AIC_SSR = ID_EMAC;
-   AIC->AIC_SMR = AIC_SMR_SRCTYPE_INT_LEVEL_SENSITIVE | AIC_SMR_PRIOR(SAMA5D3_ETH_IRQ_PRIORITY);
-   AIC->AIC_SVR = (uint32_t) sama5d3EthIrqHandler;
+   AIC->AIC_SMR = AIC_SMR_SRCTYPE_INT_LEVEL_SENSITIVE | AIC_SMR_PRIOR(SAMA5D3_ETH1_IRQ_PRIORITY);
+   AIC->AIC_SVR = (uint32_t) sama5d3Eth1IrqHandler;
 
    //Enable the EMAC to transmit and receive data
    EMAC->EMAC_NCR |= EMAC_NCR_TE | EMAC_NCR_RE;
@@ -221,7 +224,7 @@ error_t sama5d3EthInit(NetInterface *interface)
  * @param[in] interface Underlying network interface
  **/
 
-__weak_func void sama5d3EthInitGpio(NetInterface *interface)
+__weak_func void sama5d3Eth1InitGpio(NetInterface *interface)
 {
 //SAMA5D3-Xplained or SAMA5D3-EDS evaluation board?
 #if defined(USE_SAMA5D3_XPLAINED) || defined(USE_SAMA5D3_EDS)
@@ -249,13 +252,13 @@ __weak_func void sama5d3EthInitGpio(NetInterface *interface)
  * @param[in] interface Underlying network interface
  **/
 
-void sama5d3EthInitBufferDesc(NetInterface *interface)
+void sama5d3Eth1InitBufferDesc(NetInterface *interface)
 {
    uint_t i;
    uint32_t address;
 
    //Initialize TX buffer descriptors
-   for(i = 0; i < SAMA5D3_ETH_TX_BUFFER_COUNT; i++)
+   for(i = 0; i < SAMA5D3_ETH1_TX_BUFFER_COUNT; i++)
    {
       //Calculate the address of the current TX buffer
       address = (uint32_t) txBuffer[i];
@@ -271,7 +274,7 @@ void sama5d3EthInitBufferDesc(NetInterface *interface)
    txBufferIndex = 0;
 
    //Initialize RX buffer descriptors
-   for(i = 0; i < SAMA5D3_ETH_RX_BUFFER_COUNT; i++)
+   for(i = 0; i < SAMA5D3_ETH1_RX_BUFFER_COUNT; i++)
    {
       //Calculate the address of the current RX buffer
       address = (uint32_t) rxBuffer[i];
@@ -302,7 +305,7 @@ void sama5d3EthInitBufferDesc(NetInterface *interface)
  * @param[in] interface Underlying network interface
  **/
 
-void sama5d3EthTick(NetInterface *interface)
+void sama5d3Eth1Tick(NetInterface *interface)
 {
    //Valid Ethernet PHY or switch driver?
    if(interface->phyDriver != NULL)
@@ -327,7 +330,7 @@ void sama5d3EthTick(NetInterface *interface)
  * @param[in] interface Underlying network interface
  **/
 
-void sama5d3EthEnableIrq(NetInterface *interface)
+void sama5d3Eth1EnableIrq(NetInterface *interface)
 {
    //Enable Ethernet MAC interrupts
    AIC->AIC_SSR = ID_EMAC;
@@ -356,7 +359,7 @@ void sama5d3EthEnableIrq(NetInterface *interface)
  * @param[in] interface Underlying network interface
  **/
 
-void sama5d3EthDisableIrq(NetInterface *interface)
+void sama5d3Eth1DisableIrq(NetInterface *interface)
 {
    //Disable Ethernet MAC interrupts
    AIC->AIC_SSR = ID_EMAC;
@@ -384,7 +387,7 @@ void sama5d3EthDisableIrq(NetInterface *interface)
  * @brief SAMA5D3 Ethernet MAC interrupt service routine
  **/
 
-void sama5d3EthIrqHandler(void)
+void sama5d3Eth1IrqHandler(void)
 {
    bool_t flag;
    volatile uint32_t isr;
@@ -402,6 +405,7 @@ void sama5d3EthIrqHandler(void)
    isr = EMAC->EMAC_ISR;
    tsr = EMAC->EMAC_TSR;
    rsr = EMAC->EMAC_RSR;
+   (void) isr;
 
    //Packet transmitted?
    if((tsr & (EMAC_TSR_UND | EMAC_TSR_COMP | EMAC_TSR_BEX |
@@ -440,7 +444,7 @@ void sama5d3EthIrqHandler(void)
  * @param[in] interface Underlying network interface
  **/
 
-void sama5d3EthEventHandler(NetInterface *interface)
+void sama5d3Eth1EventHandler(NetInterface *interface)
 {
    error_t error;
    uint32_t rsr;
@@ -458,7 +462,7 @@ void sama5d3EthEventHandler(NetInterface *interface)
       do
       {
          //Read incoming packet
-         error = sama5d3EthReceivePacket(interface);
+         error = sama5d3Eth1ReceivePacket(interface);
 
          //No more data in the receive buffer?
       } while(error != ERROR_BUFFER_EMPTY);
@@ -476,7 +480,7 @@ void sama5d3EthEventHandler(NetInterface *interface)
  * @return Error code
  **/
 
-error_t sama5d3EthSendPacket(NetInterface *interface,
+error_t sama5d3Eth1SendPacket(NetInterface *interface,
    const NetBuffer *buffer, size_t offset, NetTxAncillary *ancillary)
 {
    size_t length;
@@ -485,7 +489,7 @@ error_t sama5d3EthSendPacket(NetInterface *interface,
    length = netBufferGetLength(buffer) - offset;
 
    //Check the frame length
-   if(length > SAMA5D3_ETH_TX_BUFFER_SIZE)
+   if(length > SAMA5D3_ETH1_TX_BUFFER_SIZE)
    {
       //The transmitter can accept another packet
       osSetEvent(&interface->nicTxEvent);
@@ -503,7 +507,7 @@ error_t sama5d3EthSendPacket(NetInterface *interface,
    netBufferRead(txBuffer[txBufferIndex], buffer, offset, length);
 
    //Set the necessary flags in the descriptor entry
-   if(txBufferIndex < (SAMA5D3_ETH_TX_BUFFER_COUNT - 1))
+   if(txBufferIndex < (SAMA5D3_ETH1_TX_BUFFER_COUNT - 1))
    {
       //Write the status word
       txBufferDesc[txBufferIndex].status = EMAC_TX_LAST |
@@ -543,9 +547,9 @@ error_t sama5d3EthSendPacket(NetInterface *interface,
  * @return Error code
  **/
 
-error_t sama5d3EthReceivePacket(NetInterface *interface)
+error_t sama5d3Eth1ReceivePacket(NetInterface *interface)
 {
-   static uint8_t temp[ETH_MAX_FRAME_SIZE];
+   static uint32_t temp[ETH_MAX_FRAME_SIZE / 4];
    error_t error;
    uint_t i;
    uint_t j;
@@ -555,20 +559,21 @@ error_t sama5d3EthReceivePacket(NetInterface *interface)
    size_t size;
    size_t length;
 
-   //Initialize SOF and EOF indices
+   //Initialize variables
+   size = 0;
    sofIndex = UINT_MAX;
    eofIndex = UINT_MAX;
 
    //Search for SOF and EOF flags
-   for(i = 0; i < SAMA5D3_ETH_RX_BUFFER_COUNT; i++)
+   for(i = 0; i < SAMA5D3_ETH1_RX_BUFFER_COUNT; i++)
    {
       //Point to the current entry
       j = rxBufferIndex + i;
 
       //Wrap around to the beginning of the buffer if necessary
-      if(j >= SAMA5D3_ETH_RX_BUFFER_COUNT)
+      if(j >= SAMA5D3_ETH1_RX_BUFFER_COUNT)
       {
-         j -= SAMA5D3_ETH_RX_BUFFER_COUNT;
+         j -= SAMA5D3_ETH1_RX_BUFFER_COUNT;
       }
 
       //No more entries to process?
@@ -623,9 +628,9 @@ error_t sama5d3EthReceivePacket(NetInterface *interface)
       if(eofIndex != UINT_MAX && i >= sofIndex && i <= eofIndex)
       {
          //Calculate the number of bytes to read at a time
-         n = MIN(size, SAMA5D3_ETH_RX_BUFFER_SIZE);
+         n = MIN(size, SAMA5D3_ETH1_RX_BUFFER_SIZE);
          //Copy data from receive buffer
-         osMemcpy(temp + length, rxBuffer[rxBufferIndex], n);
+         osMemcpy((uint8_t *) temp + length, rxBuffer[rxBufferIndex], n);
          //Update byte counters
          length += n;
          size -= n;
@@ -638,7 +643,7 @@ error_t sama5d3EthReceivePacket(NetInterface *interface)
       rxBufferIndex++;
 
       //Wrap around to the beginning of the buffer if necessary
-      if(rxBufferIndex >= SAMA5D3_ETH_RX_BUFFER_COUNT)
+      if(rxBufferIndex >= SAMA5D3_ETH1_RX_BUFFER_COUNT)
       {
          rxBufferIndex = 0;
       }
@@ -653,7 +658,7 @@ error_t sama5d3EthReceivePacket(NetInterface *interface)
       ancillary = NET_DEFAULT_RX_ANCILLARY;
 
       //Pass the packet to the upper layer
-      nicProcessPacket(interface, temp, length, &ancillary);
+      nicProcessPacket(interface, (uint8_t *) temp, length, &ancillary);
       //Valid packet received
       error = NO_ERROR;
    }
@@ -674,7 +679,7 @@ error_t sama5d3EthReceivePacket(NetInterface *interface)
  * @return Error code
  **/
 
-error_t sama5d3EthUpdateMacAddrFilter(NetInterface *interface)
+error_t sama5d3Eth1UpdateMacAddrFilter(NetInterface *interface)
 {
    uint_t i;
    uint_t j;
@@ -832,7 +837,7 @@ error_t sama5d3EthUpdateMacAddrFilter(NetInterface *interface)
  * @return Error code
  **/
 
-error_t sama5d3EthUpdateMacConfig(NetInterface *interface)
+error_t sama5d3Eth1UpdateMacConfig(NetInterface *interface)
 {
    uint32_t config;
 
@@ -875,7 +880,7 @@ error_t sama5d3EthUpdateMacConfig(NetInterface *interface)
  * @param[in] data Register value
  **/
 
-void sama5d3EthWritePhyReg(uint8_t opcode, uint8_t phyAddr,
+void sama5d3Eth1WritePhyReg(uint8_t opcode, uint8_t phyAddr,
    uint8_t regAddr, uint16_t data)
 {
    uint32_t temp;
@@ -914,7 +919,7 @@ void sama5d3EthWritePhyReg(uint8_t opcode, uint8_t phyAddr,
  * @return Register value
  **/
 
-uint16_t sama5d3EthReadPhyReg(uint8_t opcode, uint8_t phyAddr,
+uint16_t sama5d3Eth1ReadPhyReg(uint8_t opcode, uint8_t phyAddr,
    uint8_t regAddr)
 {
    uint16_t data;

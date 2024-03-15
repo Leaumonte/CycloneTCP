@@ -6,7 +6,7 @@
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  *
- * Copyright (C) 2010-2023 Oryx Embedded SARL. All rights reserved.
+ * Copyright (C) 2010-2024 Oryx Embedded SARL. All rights reserved.
  *
  * This file is part of CycloneTCP Open.
  *
@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.2.2
+ * @version 2.4.0
  **/
 
 //Switch to the appropriate trace level
@@ -70,31 +70,30 @@
 //Default options passed to the stack (TX path)
 const NetTxAncillary NET_DEFAULT_TX_ANCILLARY =
 {
-   0,       //Time-to-live value
-   FALSE,   //Do not send the packet via a router
-   FALSE,   //Do not add an IP Router Alert option
-#if (IP_DIFF_SERV_SUPPORT == ENABLED)
-   0,       //Differentiated services codepoint
-#endif
+   0,             //Time-to-live value
+   0,             //Type-of-service value
+   IP_DEFAULT_DF, //Do not fragment the IP packet
+   FALSE,         //Do not send the packet via a router
+   FALSE,         //Do not add an IP Router Alert option
 #if (ETH_SUPPORT == ENABLED)
-   {{{0}}}, //Source MAC address
-   {{{0}}}, //Destination MAC address
+   {{{0}}},       //Source MAC address
+   {{{0}}},       //Destination MAC address
 #endif
 #if (ETH_VLAN_SUPPORT == ENABLED)
-   -1,      //VLAN priority (802.1Q)
-   -1,      //Drop eligible indicator
+   -1,            //VLAN priority (802.1Q)
+   -1,            //Drop eligible indicator
 #endif
 #if (ETH_VMAN_SUPPORT == ENABLED)
-   -1,      //VMAN priority (802.1ad)
-   -1,      //Drop eligible indicator
+   -1,            //VMAN priority (802.1ad)
+   -1,            //Drop eligible indicator
 #endif
 #if (ETH_PORT_TAGGING_SUPPORT == ENABLED)
-   0,       //Egress port identifier
-   0,       //Egress port map
-   FALSE,   //Override port state
+   0,             //Egress port identifier
+   0,             //Egress port map
+   FALSE,         //Override port state
 #endif
 #if (ETH_TIMESTAMP_SUPPORT == ENABLED)
-   -1,      //Unique identifier for hardware time stamping
+   -1,            //Unique identifier for hardware time stamping
 #endif
 };
 
@@ -102,6 +101,7 @@ const NetTxAncillary NET_DEFAULT_TX_ANCILLARY =
 const NetRxAncillary NET_DEFAULT_RX_ANCILLARY =
 {
    0,       //Time-to-live value
+   0,       //Type-of-service value
 #if (ETH_SUPPORT == ENABLED)
    {{{0}}}, //Source MAC address
    {{{0}}}, //Destination MAC address
@@ -523,7 +523,9 @@ void netTick(void)
    {
       //Loop through network interfaces
       for(i = 0; i < NET_INTERFACE_COUNT; i++)
+      {
          autoIpTick(netInterface[i].autoIpContext);
+      }
 
       //Reset tick counter
       autoIpTickCounter = 0;
@@ -539,7 +541,9 @@ void netTick(void)
    {
       //Loop through network interfaces
       for(i = 0; i < NET_INTERFACE_COUNT; i++)
+      {
          dhcpClientTick(netInterface[i].dhcpClientContext);
+      }
 
       //Reset tick counter
       dhcpClientTickCounter = 0;
@@ -555,7 +559,9 @@ void netTick(void)
    {
       //Loop through network interfaces
       for(i = 0; i < NET_INTERFACE_COUNT; i++)
+      {
          dhcpServerTick(netInterface[i].dhcpServerContext);
+      }
 
       //Reset tick counter
       dhcpServerTickCounter = 0;
@@ -631,7 +637,9 @@ void netTick(void)
    {
       //Loop through network interfaces
       for(i = 0; i < NET_INTERFACE_COUNT; i++)
+      {
          ndpRouterAdvTick(netInterface[i].ndpRouterAdvContext);
+      }
 
       //Reset tick counter
       ndpRouterAdvTickCounter = 0;
@@ -647,7 +655,9 @@ void netTick(void)
    {
       //Loop through network interfaces
       for(i = 0; i < NET_INTERFACE_COUNT; i++)
+      {
          dhcpv6ClientTick(netInterface[i].dhcpv6ClientContext);
+      }
 
       //Reset tick counter
       dhcpv6ClientTickCounter = 0;
@@ -692,7 +702,9 @@ void netTick(void)
    {
       //Loop through network interfaces
       for(i = 0; i < NET_INTERFACE_COUNT; i++)
+      {
          mdnsResponderTick(netInterface[i].mdnsResponderContext);
+      }
 
       //Reset tick counter
       mdnsResponderTickCounter = 0;
@@ -708,7 +720,9 @@ void netTick(void)
    {
       //Loop through network interfaces
       for(i = 0; i < NET_INTERFACE_COUNT; i++)
+      {
          dnsSdTick(netInterface[i].dnsSdContext);
+      }
 
       //Reset tick counter
       dnsSdTickCounter = 0;

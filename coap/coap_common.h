@@ -6,7 +6,7 @@
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  *
- * Copyright (C) 2010-2023 Oryx Embedded SARL. All rights reserved.
+ * Copyright (C) 2010-2024 Oryx Embedded SARL. All rights reserved.
  *
  * This file is part of CycloneTCP Open.
  *
@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.2.2
+ * @version 2.4.0
  **/
 
 #ifndef _COAP_COMMON_H
@@ -153,8 +153,10 @@ typedef enum
 } CoapCode;
 
 
-//CodeWarrior or Win32 compiler?
-#if defined(__CWCC__) || defined(_WIN32)
+//CC-RX, CodeWarrior or Win32 compiler?
+#if defined(__CCRX__)
+   #pragma pack
+#elif defined(__CWCC__) || defined(_WIN32)
    #pragma pack(push, 1)
 #endif
 
@@ -163,7 +165,7 @@ typedef enum
  * @brief CoAP message format
  **/
 
-typedef __start_packed struct
+typedef __packed_struct
 {
 #if defined(_CPU_BIG_ENDIAN) && !defined(__ICCRX__)
    uint8_t version : 2;  //0
@@ -177,14 +179,14 @@ typedef __start_packed struct
    uint8_t code;         //1
    uint16_t mid;         //2-3
    uint8_t token[];      //4
-} __end_packed CoapMessageHeader;
+} CoapMessageHeader;
 
 
 /**
  * @brief CoAP option format
  **/
 
-typedef __start_packed struct
+typedef __packed_struct
 {
 #if defined(_CPU_BIG_ENDIAN) && !defined(__ICCRX__)
    uint8_t delta : 4;  //0
@@ -193,11 +195,13 @@ typedef __start_packed struct
    uint8_t length : 4; //0
    uint8_t delta : 4;
 #endif
-} __end_packed CoapOptionHeader;
+} CoapOptionHeader;
 
 
-//CodeWarrior or Win32 compiler?
-#if defined(__CWCC__) || defined(_WIN32)
+//CC-RX, CodeWarrior or Win32 compiler?
+#if defined(__CCRX__)
+   #pragma unpack
+#elif defined(__CWCC__) || defined(_WIN32)
    #pragma pack(pop)
 #endif
 

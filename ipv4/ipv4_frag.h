@@ -6,7 +6,7 @@
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  *
- * Copyright (C) 2010-2023 Oryx Embedded SARL. All rights reserved.
+ * Copyright (C) 2010-2024 Oryx Embedded SARL. All rights reserved.
  *
  * This file is part of CycloneTCP Open.
  *
@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.2.2
+ * @version 2.4.0
  **/
 
 #ifndef _IPV4_FRAG_H
@@ -40,6 +40,13 @@
    #define IPV4_FRAG_SUPPORT ENABLED
 #elif (IPV4_FRAG_SUPPORT != ENABLED && IPV4_FRAG_SUPPORT != DISABLED)
    #error IPV4_FRAG_SUPPORT parameter is not valid
+#endif
+
+//Support for overlapping fragments
+#ifndef IPV4_OVERLAPPING_FRAG_SUPPORT
+   #define IPV4_OVERLAPPING_FRAG_SUPPORT ENABLED
+#elif (IPV4_OVERLAPPING_FRAG_SUPPORT != ENABLED && IPV4_OVERLAPPING_FRAG_SUPPORT != DISABLED)
+   #error IPV4_OVERLAPPING_FRAG_SUPPORT parameter is not valid
 #endif
 
 //Reassembly algorithm tick interval
@@ -80,8 +87,10 @@ extern "C" {
 #endif
 
 
-//CodeWarrior or Win32 compiler?
-#if defined(__CWCC__) || defined(_WIN32)
+//CC-RX, CodeWarrior or Win32 compiler?
+#if defined(__CCRX__)
+   #pragma pack
+#elif defined(__CWCC__) || defined(_WIN32)
    #pragma pack(push, 1)
 #endif
 
@@ -90,16 +99,18 @@ extern "C" {
  * @brief Hole descriptor
  **/
 
-typedef __start_packed struct
+typedef __packed_struct
 {
    uint16_t first;
    uint16_t last;
    uint16_t next;
-} __end_packed Ipv4HoleDesc;
+} Ipv4HoleDesc;
 
 
-//CodeWarrior or Win32 compiler?
-#if defined(__CWCC__) || defined(_WIN32)
+//CC-RX, CodeWarrior or Win32 compiler?
+#if defined(__CCRX__)
+   #pragma unpack
+#elif defined(__CWCC__) || defined(_WIN32)
    #pragma pack(pop)
 #endif
 
@@ -135,7 +146,7 @@ extern systime_t ipv4FragTickCounter;
 
 //IPv4 datagram fragmentation and reassembly
 error_t ipv4FragmentDatagram(NetInterface *interface,
-   Ipv4PseudoHeader *pseudoHeader, uint16_t id, const NetBuffer *payload,
+   const Ipv4PseudoHeader *pseudoHeader, uint16_t id, const NetBuffer *payload,
    size_t payloadOffset, NetTxAncillary *ancillary);
 
 void ipv4ReassembleDatagram(NetInterface *interface, const Ipv4Header *packet,

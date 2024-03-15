@@ -6,7 +6,7 @@
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  *
- * Copyright (C) 2010-2023 Oryx Embedded SARL. All rights reserved.
+ * Copyright (C) 2010-2024 Oryx Embedded SARL. All rights reserved.
  *
  * This file is part of CycloneTCP Open.
  *
@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.2.2
+ * @version 2.4.0
  **/
 
 #ifndef _IGMP_SNOOPING_MISC_H
@@ -42,28 +42,28 @@ extern "C" {
 
 //IGMP snooping related functions
 void igmpSnoopingProcessMessage(IgmpSnoopingContext *context,
-   Ipv4PseudoHeader *pseudoHeader, const IgmpMessage *message,
-   size_t length, NetRxAncillary *ancillary);
+   const Ipv4PseudoHeader *pseudoHeader, const IgmpMessage *message,
+   size_t length, const NetRxAncillary *ancillary);
 
 void igmpSnoopingProcessMembershipQuery(IgmpSnoopingContext *context,
-   Ipv4PseudoHeader *pseudoHeader, const IgmpMessage *message,
-   size_t length, NetRxAncillary *ancillary);
+   const Ipv4PseudoHeader *pseudoHeader, const IgmpMessage *message,
+   size_t length, const NetRxAncillary *ancillary);
 
 void igmpSnoopingProcessMembershipReport(IgmpSnoopingContext *context,
-   Ipv4PseudoHeader *pseudoHeader, const IgmpMessage *message,
-   size_t length, NetRxAncillary *ancillary);
+   const Ipv4PseudoHeader *pseudoHeader, const IgmpMessage *message,
+   size_t length, const NetRxAncillary *ancillary);
 
 void igmpSnoopingProcessLeaveGroup(IgmpSnoopingContext *context,
-   Ipv4PseudoHeader *pseudoHeader, const IgmpMessage *message,
-   size_t length, NetRxAncillary *ancillary);
+   const Ipv4PseudoHeader *pseudoHeader, const IgmpMessage *message,
+   size_t length, const NetRxAncillary *ancillary);
 
 void igmpSnoopingProcessUnknownMessage(IgmpSnoopingContext *context,
-   Ipv4PseudoHeader *pseudoHeader, const IgmpMessage *message,
-   size_t length, NetRxAncillary *ancillary);
+   const Ipv4PseudoHeader *pseudoHeader, const IgmpMessage *message,
+   size_t length, const NetRxAncillary *ancillary);
 
 error_t igmpSnoopingForwardMessage(IgmpSnoopingContext *context,
    uint32_t forwardPorts, const MacAddr *destMacAddr,
-   Ipv4PseudoHeader *pseudoHeader, const IgmpMessage *message,
+   const Ipv4PseudoHeader *pseudoHeader, const IgmpMessage *message,
    size_t length);
 
 IgmpSnoopingGroup *igmpSnoopingCreateGroup(IgmpSnoopingContext *context,

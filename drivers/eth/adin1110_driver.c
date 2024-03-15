@@ -6,7 +6,7 @@
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  *
- * Copyright (C) 2010-2023 Oryx Embedded SARL. All rights reserved.
+ * Copyright (C) 2010-2024 Oryx Embedded SARL. All rights reserved.
  *
  * This file is part of CycloneTCP Open.
  *
@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.2.2
+ * @version 2.4.0
  **/
 
 //Switch to the appropriate trace level
@@ -172,6 +172,9 @@ error_t adin1110Init(NetInterface *interface)
       ADIN1110_LED_POLARITY_LED0_POLARITY_AUTOSENSE |
       ADIN1110_LED_POLARITY_LED1_POLARITY_AUTOSENSE);
 
+   //Perform custom configuration
+   adin1110InitHook(interface);
+
    //Clear the CRSM_SFT_PD bit to exit software power-down mode. At this point,
    //the MAC-PHY starts autonegotiation and attempts to bring up a link after
    //autonegotiation completes
@@ -189,6 +192,16 @@ error_t adin1110Init(NetInterface *interface)
 
    //Successful initialization
    return NO_ERROR;
+}
+
+
+/**
+ * @brief ADIN1110 custom configuration
+ * @param[in] interface Underlying network interface
+ **/
+
+__weak_func void adin1110InitHook(NetInterface *interface)
+{
 }
 
 

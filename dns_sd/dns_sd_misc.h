@@ -6,7 +6,7 @@
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  *
- * Copyright (C) 2010-2023 Oryx Embedded SARL. All rights reserved.
+ * Copyright (C) 2010-2024 Oryx Embedded SARL. All rights reserved.
  *
  * This file is part of CycloneTCP Open.
  *
@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.2.2
+ * @version 2.4.0
  **/
 
 #ifndef _DNS_SD_MISC_H
@@ -65,8 +65,8 @@ void dnsSdGenerateAdditionalRecords(NetInterface *interface,
 error_t dnsSdFormatServiceEnumPtrRecord(NetInterface *interface,
    MdnsMessage *message, const DnsSdService *service, uint32_t ttl);
 
-error_t dnsSdFormatPtrRecord(NetInterface *interface,
-   MdnsMessage *message, const DnsSdService *service, uint32_t ttl);
+error_t dnsSdFormatPtrRecord(NetInterface *interface, MdnsMessage *message,
+   const DnsSdService *service, uint32_t ttl);
 
 error_t dnsSdFormatSrvRecord(NetInterface *interface, MdnsMessage *message,
    const DnsSdService *service, bool_t cacheFlush, uint32_t ttl);

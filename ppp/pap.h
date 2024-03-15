@@ -6,7 +6,7 @@
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  *
- * Copyright (C) 2010-2023 Oryx Embedded SARL. All rights reserved.
+ * Copyright (C) 2010-2024 Oryx Embedded SARL. All rights reserved.
  *
  * This file is part of CycloneTCP Open.
  *
@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.2.2
+ * @version 2.4.0
  **/
 
 #ifndef _PAP_H
@@ -91,8 +91,10 @@ typedef enum
 } PapCode;
 
 
-//CodeWarrior or Win32 compiler?
-#if defined(__CWCC__) || defined(_WIN32)
+//CC-RX, CodeWarrior or Win32 compiler?
+#if defined(__CCRX__)
+   #pragma pack
+#elif defined(__CWCC__) || defined(_WIN32)
    #pragma pack(push, 1)
 #endif
 
@@ -101,46 +103,48 @@ typedef enum
  * @brief Authenticate-Request packet
  **/
 
-typedef __start_packed struct
+typedef __packed_struct
 {
    uint8_t code;         //0
    uint8_t identifier;   //1
    uint16_t length;      //2-3
    uint8_t peerIdLength; //4
    uint8_t peerId[];     //5
-} __end_packed PapAuthReqPacket;
+} PapAuthReqPacket;
 
 
 /**
  * @brief Authenticate-Ack packet
  **/
 
-typedef __start_packed struct
+typedef __packed_struct
 {
    uint8_t code;       //0
    uint8_t identifier; //1
    uint16_t length;    //2-3
    uint8_t msgLength;  //4
    uint8_t message[];  //5
-} __end_packed PapAuthAckPacket;
+} PapAuthAckPacket;
 
 
 /**
  * @brief Authenticate-Nak packet
  **/
 
-typedef __start_packed struct
+typedef __packed_struct
 {
    uint8_t code;       //0
    uint8_t identifier; //1
    uint16_t length;    //2-3
    uint8_t msgLength;  //4
    uint8_t message[];  //5
-} __end_packed PapAuthNakPacket;
+} PapAuthNakPacket;
 
 
-//CodeWarrior or Win32 compiler?
-#if defined(__CWCC__) || defined(_WIN32)
+//CC-RX, CodeWarrior or Win32 compiler?
+#if defined(__CCRX__)
+   #pragma unpack
+#elif defined(__CWCC__) || defined(_WIN32)
    #pragma pack(pop)
 #endif
 

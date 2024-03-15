@@ -6,7 +6,7 @@
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  *
- * Copyright (C) 2010-2023 Oryx Embedded SARL. All rights reserved.
+ * Copyright (C) 2010-2024 Oryx Embedded SARL. All rights reserved.
  *
  * This file is part of CycloneTCP Open.
  *
@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.2.2
+ * @version 2.4.0
  **/
 
 //Switch to the appropriate trace level
@@ -194,10 +194,10 @@ error_t stm32h7xxEthInit(NetInterface *interface)
    ETH->DMACCR = ETH_DMACCR_DSL_0BIT;
 
    //Configure TX features
-   ETH->DMACTCR = ETH_DMACTCR_TPBL_1PBL;
+   ETH->DMACTCR = ETH_DMACTCR_TPBL_32PBL;
 
    //Configure RX features
-   ETH->DMACRCR = ETH_DMACRCR_RPBL_1PBL;
+   ETH->DMACRCR = ETH_DMACRCR_RPBL_32PBL;
    ETH->DMACRCR |= (STM32H7XX_ETH_RX_BUFFER_SIZE << 1) & ETH_DMACRCR_RBSZ;
 
    //Enable store and forward mode
@@ -633,7 +633,7 @@ void stm32h7xxEthEventHandler(NetInterface *interface)
 error_t stm32h7xxEthSendPacket(NetInterface *interface,
    const NetBuffer *buffer, size_t offset, NetTxAncillary *ancillary)
 {
-   static uint8_t temp[STM32H7XX_ETH_TX_BUFFER_SIZE];
+   static uint32_t temp[STM32H7XX_ETH_TX_BUFFER_SIZE / 4];
    size_t length;
 
    //Retrieve the length of the packet
@@ -699,9 +699,10 @@ error_t stm32h7xxEthSendPacket(NetInterface *interface,
 
 error_t stm32h7xxEthReceivePacket(NetInterface *interface)
 {
-   static uint8_t temp[STM32H7XX_ETH_RX_BUFFER_SIZE];
+   static uint32_t temp[STM32H7XX_ETH_RX_BUFFER_SIZE / 4];
    error_t error;
    size_t n;
+   uint32_t status;
    NetRxAncillary ancillary;
 
    //Current buffer available for reading?
@@ -711,8 +712,18 @@ error_t stm32h7xxEthReceivePacket(NetInterface *interface)
       if((rxDmaDesc[rxIndex].rdes3 & ETH_RDES3_FD) != 0 &&
          (rxDmaDesc[rxIndex].rdes3 & ETH_RDES3_LD) != 0)
       {
+         //Check error bits
+         status = rxDmaDesc[rxIndex].rdes3 & (ETH_RDES3_CE | ETH_RDES3_GP |
+            ETH_RDES3_RWT | ETH_RDES3_OE | ETH_RDES3_RE | ETH_RDES3_DE);
+
+         //The dribble bit error is valid only in the MII mode
+         if((SYSCFG->PMCR & SYSCFG_PMCR_EPIS_SEL) != SYSCFG_ETH_MII)
+         {
+            status &= ~ETH_RDES3_DE;
+         }
+
          //Make sure no error occurred
-         if((rxDmaDesc[rxIndex].rdes3 & ETH_RDES3_ES) == 0)
+         if(status == 0)
          {
             //Retrieve the length of the frame
             n = rxDmaDesc[rxIndex].rdes3 & ETH_RDES3_PL;
@@ -726,7 +737,7 @@ error_t stm32h7xxEthReceivePacket(NetInterface *interface)
             ancillary = NET_DEFAULT_RX_ANCILLARY;
 
             //Pass the packet to the upper layer
-            nicProcessPacket(interface, temp, n, &ancillary);
+            nicProcessPacket(interface, (uint8_t *) temp, n, &ancillary);
 
             //Valid packet received
             error = NO_ERROR;

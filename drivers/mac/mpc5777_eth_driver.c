@@ -1,12 +1,12 @@
 /**
- * @file mpc57xx_eth_driver.c
- * @brief NXP MPC57xx Ethernet MAC driver
+ * @file mpc5777_eth_driver.c
+ * @brief NXP MPC5777 Ethernet MAC driver
  *
  * @section License
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  *
- * Copyright (C) 2010-2023 Oryx Embedded SARL. All rights reserved.
+ * Copyright (C) 2010-2024 Oryx Embedded SARL. All rights reserved.
  *
  * This file is part of CycloneTCP Open.
  *
@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.2.2
+ * @version 2.4.0
  **/
 
 //Switch to the appropriate trace level
@@ -33,26 +33,26 @@
 
 //Dependencies
 #include "device_registers.h"
+#include "interrupt_manager.h"
 #include "core/net.h"
-#include "drivers/mac/mpc57xx_eth_driver.h"
+#include "drivers/mac/mpc5777_eth_driver.h"
 #include "debug.h"
 
 //Underlying network interface
 static NetInterface *nicDriverInterface;
 
 //TX buffer
-static uint8_t txBuffer[MPC57XX_ETH_TX_BUFFER_COUNT][MPC57XX_ETH_TX_BUFFER_SIZE]
+static uint8_t txBuffer[MPC5777_ETH_TX_BUFFER_COUNT][MPC5777_ETH_TX_BUFFER_SIZE]
    __attribute__((aligned(64)));
 //RX buffer
-static uint8_t rxBuffer[MPC57XX_ETH_RX_BUFFER_COUNT][MPC57XX_ETH_RX_BUFFER_SIZE]
+static uint8_t rxBuffer[MPC5777_ETH_RX_BUFFER_COUNT][MPC5777_ETH_RX_BUFFER_SIZE]
    __attribute__((aligned(64)));
 //TX buffer descriptors
-static uint32_t txBufferDesc[MPC57XX_ETH_TX_BUFFER_COUNT][8]
+static uint32_t txBufferDesc[MPC5777_ETH_TX_BUFFER_COUNT][2]
    __attribute__((aligned(64)));
 //RX buffer descriptors
-static uint32_t rxBufferDesc[MPC57XX_ETH_RX_BUFFER_COUNT][8]
+static uint32_t rxBufferDesc[MPC5777_ETH_RX_BUFFER_COUNT][2]
    __attribute__((aligned(64)));
-
 
 //TX buffer index
 static uint_t txBufferIndex;
@@ -61,23 +61,23 @@ static uint_t rxBufferIndex;
 
 
 /**
- * @brief MPC57xx Ethernet MAC driver
+ * @brief MPC5777 Ethernet MAC driver
  **/
 
-const NicDriver mpc57xxEthDriver =
+const NicDriver mpc5777EthDriver =
 {
    NIC_TYPE_ETHERNET,
    ETH_MTU,
-   mpc57xxEthInit,
-   mpc57xxEthTick,
-   mpc57xxEthEnableIrq,
-   mpc57xxEthDisableIrq,
-   mpc57xxEthEventHandler,
-   mpc57xxEthSendPacket,
-   mpc57xxEthUpdateMacAddrFilter,
-   mpc57xxEthUpdateMacConfig,
-   mpc57xxEthWritePhyReg,
-   mpc57xxEthReadPhyReg,
+   mpc5777EthInit,
+   mpc5777EthTick,
+   mpc5777EthEnableIrq,
+   mpc5777EthDisableIrq,
+   mpc5777EthEventHandler,
+   mpc5777EthSendPacket,
+   mpc5777EthUpdateMacAddrFilter,
+   mpc5777EthUpdateMacConfig,
+   mpc5777EthWritePhyReg,
+   mpc5777EthReadPhyReg,
    TRUE,
    TRUE,
    TRUE,
@@ -86,40 +86,40 @@ const NicDriver mpc57xxEthDriver =
 
 
 /**
- * @brief MPC57xx Ethernet MAC initialization
+ * @brief MPC5777 Ethernet MAC initialization
  * @param[in] interface Underlying network interface
  * @return Error code
  **/
 
-error_t mpc57xxEthInit(NetInterface *interface)
+error_t mpc5777EthInit(NetInterface *interface)
 {
    error_t error;
    uint32_t value;
 
    //Debug message
-   TRACE_INFO("Initializing MPC57xx Ethernet MAC...\r\n");
+   TRACE_INFO("Initializing MPC5777 Ethernet MAC...\r\n");
 
    //Save underlying network interface
    nicDriverInterface = interface;
 
    //GPIO configuration
-   mpc57xxEthInitGpio(interface);
+   mpc5777EthInitGpio(interface);
 
-   //Reset ENET module
-   ENET_0->ECR = ENET_ECR_RESET_MASK;
+   //Reset FEC module
+   FEC->ECR = FEC_ECR_RESET_MASK;
    //Wait for the reset to complete
-   while((ENET_0->ECR & ENET_ECR_RESET_MASK) != 0)
+   while((FEC->ECR & FEC_ECR_RESET_MASK) != 0)
    {
    }
 
    //Receive control register
-   ENET_0->RCR = ENET_RCR_MAX_FL(MPC57XX_ETH_RX_BUFFER_SIZE) |
-      ENET_RCR_RMII_MODE_MASK | ENET_RCR_MII_MODE_MASK;
+   FEC->RCR = FEC_RCR_MAX_FL(MPC5777_ETH_RX_BUFFER_SIZE) |
+      FEC_RCR_RMII_MODE_MASK | FEC_RCR_MII_MODE_MASK;
 
    //Transmit control register
-   ENET_0->TCR = 0;
+   FEC->TCR = 0;
    //Configure MDC clock frequency
-   ENET_0->MSCR = ENET_MSCR_MII_SPEED(19);
+   FEC->MSCR = FEC_MSCR_MII_SPEED(19);
 
    //Valid Ethernet PHY or switch driver?
    if(interface->phyDriver != NULL)
@@ -147,53 +147,44 @@ error_t mpc57xxEthInit(NetInterface *interface)
    //Set the MAC address of the station (upper 16 bits)
    value = interface->macAddr.b[5];
    value |= (interface->macAddr.b[4] << 8);
-   ENET_0->PAUR = ENET_PAUR_PADDR2(value) | ENET_PAUR_TYPE(0x8808);
+   FEC->PAUR = FEC_PAUR_PADDR2(value) | FEC_PAUR_TYPE(0x8808);
 
    //Set the MAC address of the station (lower 32 bits)
    value = interface->macAddr.b[3];
    value |= (interface->macAddr.b[2] << 8);
    value |= (interface->macAddr.b[1] << 16);
    value |= (interface->macAddr.b[0] << 24);
-   ENET_0->PALR = ENET_PALR_PADDR1(value);
+   FEC->PALR = FEC_PALR_PADDR1(value);
 
    //Hash table for unicast address filtering
-   ENET_0->IALR = 0;
-   ENET_0->IAUR = 0;
+   FEC->IALR = 0;
+   FEC->IAUR = 0;
    //Hash table for multicast address filtering
-   ENET_0->GALR = 0;
-   ENET_0->GAUR = 0;
+   FEC->GALR = 0;
+   FEC->GAUR = 0;
 
-   //Disable transmit accelerator functions
-   ENET_0->TACC = 0;
-   //Disable receive accelerator functions
-   ENET_0->RACC = 0;
-
-   //Use enhanced buffer descriptors
-   ENET_0->ECR = ENET_ECR_EN1588_MASK;
-
-   //Reset statistics counters
-   ENET_0->MIBC = ENET_MIBC_MIB_CLEAR_MASK;
-   ENET_0->MIBC = 0;
+   //Disable statistics counters
+   FEC->MIBC = FEC_MIBC_MIB_DIS_MASK;
 
    //Initialize buffer descriptors
-   mpc57xxEthInitBufferDesc(interface);
+   mpc5777EthInitBufferDesc(interface);
 
    //Clear any pending interrupts
-   ENET_0->EIR = 0xFFFFFFFF;
+   FEC->EIR = 0xFFFFFFFF;
    //Enable desired interrupts
-   ENET_0->EIMR = ENET_EIMR_TXF_MASK | ENET_EIMR_RXF_MASK | ENET_EIMR_EBERR_MASK;
+   FEC->EIMR = FEC_EIMR_TXF_MASK | FEC_EIMR_RXF_MASK | FEC_EIMR_EBERR_MASK;
 
-   //Configure ENET transmit interrupt priority
-   INTC->PSR[ENET0_GROUP2_IRQn] = INTC_PSR_PRIN(MPC57XX_ETH_IRQ_PRIORITY);
-   //Configure ENET receive interrupt priority
-   INTC->PSR[ENET0_GROUP1_IRQn] = INTC_PSR_PRIN(MPC57XX_ETH_IRQ_PRIORITY);
-   //Configure ENET error interrupt priority
-   INTC->PSR[ENET0_GROUP0_IRQn] = INTC_PSR_PRIN(MPC57XX_ETH_IRQ_PRIORITY);
+   //Configure FEC transmit interrupt priority
+   INT_SYS_SetPriority(FEC_TXF_IRQn, MPC5777_ETH_IRQ_PRIORITY);
+   //Configure FEC receive interrupt priority
+   INT_SYS_SetPriority(FEC_RXF_IRQn, MPC5777_ETH_IRQ_PRIORITY);
+   //Configure FEC error interrupt priority
+   INT_SYS_SetPriority(FEC_ERR_IRQn, MPC5777_ETH_IRQ_PRIORITY);
 
    //Enable Ethernet MAC
-   ENET_0->ECR |= ENET_ECR_ETHEREN_MASK;
+   FEC->ECR |= FEC_ECR_ETHER_EN_MASK;
    //Instruct the DMA to poll the receive descriptor list
-   ENET_0->RDAR = ENET_RDAR_RDAR_MASK;
+   FEC->RDAR = FEC_RDAR_RDAR_MASK;
 
    //Accept any packets from the upper layer
    osSetEvent(&interface->nicTxEvent);
@@ -208,52 +199,8 @@ error_t mpc57xxEthInit(NetInterface *interface)
  * @param[in] interface Underlying network interface
  **/
 
-__weak_func void mpc57xxEthInitGpio(NetInterface *interface)
+__weak_func void mpc5777EthInitGpio(NetInterface *interface)
 {
-//DEVKIT-MPC5748G evaluation board?
-#if defined(USE_DEVKIT_MPC5748G)
-   //Configure MII_RMII_0_MDIO (PF14)
-   SIUL2->MSCR[94] = SIUL2_MSCR_SRC(3) | SIUL2_MSCR_OBE_MASK |
-      SIUL2_MSCR_SMC_MASK | SIUL2_MSCR_IBE_MASK | SIUL2_MSCR_PUS_MASK |
-      SIUL2_MSCR_PUE_MASK | SIUL2_MSCR_SSS(4);
-   SIUL2->IMCR[450] = SIUL2_IMCR_SSS(1);
-
-   //Configure MII_RMII_0_MDC (PG0)
-   SIUL2->MSCR[96] = SIUL2_MSCR_SRC(3) | SIUL2_MSCR_OBE_MASK |
-      SIUL2_MSCR_SMC_MASK | SIUL2_MSCR_SSS(3);
-
-   //Configure MII_RMII_0_TXD0 (PH1)
-   SIUL2->MSCR[113] = SIUL2_MSCR_SRC(3) | SIUL2_MSCR_OBE_MASK |
-      SIUL2_MSCR_SMC_MASK | SIUL2_MSCR_SSS(4);
-
-   //Configure MII_RMII_0_TXD1 (PH0)
-   SIUL2->MSCR[112] = SIUL2_MSCR_SRC(3) | SIUL2_MSCR_OBE_MASK |
-      SIUL2_MSCR_SMC_MASK | SIUL2_MSCR_SSS(3);
-
-   //Configure MII_RMII_0_TX_EN (PH2)
-   SIUL2->MSCR[114] = SIUL2_MSCR_SRC(3) | SIUL2_MSCR_OBE_MASK |
-      SIUL2_MSCR_SMC_MASK | SIUL2_MSCR_SSS(4);
-
-   //Configure MII_RMII_0_TX_CLK (PG1)
-   SIUL2->MSCR[97] = SIUL2_MSCR_SMC_MASK | SIUL2_MSCR_IBE_MASK;
-   SIUL2->IMCR[449] = SIUL2_IMCR_SSS(1);
-
-   //Configure MII_RMII_0_RXD0 (PA9)
-   SIUL2->MSCR[9] = SIUL2_MSCR_SMC_MASK | SIUL2_MSCR_IBE_MASK;
-   SIUL2->IMCR[451] = SIUL2_IMCR_SSS(1);
-
-   //Configure MII_RMII_0_RXD1 (PA8)
-   SIUL2->MSCR[8] = SIUL2_MSCR_SMC_MASK | SIUL2_MSCR_IBE_MASK;
-   SIUL2->IMCR[452] = SIUL2_IMCR_SSS(1);
-
-   //Configure MII_RMII_0_RX_ER (PA11)
-   SIUL2->MSCR[11] = SIUL2_MSCR_SMC_MASK | SIUL2_MSCR_IBE_MASK;
-   SIUL2->IMCR[455] = SIUL2_IMCR_SSS(1);
-
-   //Configure MII_RMII_0_RX_DV (PF15)
-   SIUL2->MSCR[95] = SIUL2_MSCR_SMC_MASK | SIUL2_MSCR_IBE_MASK;
-   SIUL2->IMCR[457] = SIUL2_IMCR_SSS(1);
-#endif
 }
 
 
@@ -262,7 +209,7 @@ __weak_func void mpc57xxEthInitGpio(NetInterface *interface)
  * @param[in] interface Underlying network interface
  **/
 
-void mpc57xxEthInitBufferDesc(NetInterface *interface)
+void mpc5777EthInitBufferDesc(NetInterface *interface)
 {
    uint_t i;
    uint32_t address;
@@ -272,50 +219,46 @@ void mpc57xxEthInitBufferDesc(NetInterface *interface)
    osMemset(rxBufferDesc, 0, sizeof(rxBufferDesc));
 
    //Initialize TX buffer descriptors
-   for(i = 0; i < MPC57XX_ETH_TX_BUFFER_COUNT; i++)
+   for(i = 0; i < MPC5777_ETH_TX_BUFFER_COUNT; i++)
    {
       //Calculate the address of the current TX buffer
       address = (uint32_t) txBuffer[i];
       //Transmit buffer address
       txBufferDesc[i][1] = address;
-      //Generate interrupts
-      txBufferDesc[i][2] = ENET_TBD2_INT;
    }
 
    //Mark the last descriptor entry with the wrap flag
-   txBufferDesc[i - 1][0] |= ENET_TBD0_W;
+   txBufferDesc[i - 1][0] |= FEC_TBD0_W;
    //Initialize TX buffer index
    txBufferIndex = 0;
 
    //Initialize RX buffer descriptors
-   for(i = 0; i < MPC57XX_ETH_RX_BUFFER_COUNT; i++)
+   for(i = 0; i < MPC5777_ETH_RX_BUFFER_COUNT; i++)
    {
       //Calculate the address of the current RX buffer
       address = (uint32_t) rxBuffer[i];
       //The descriptor is initially owned by the DMA
-      rxBufferDesc[i][0] = ENET_RBD0_E;
+      rxBufferDesc[i][0] = FEC_RBD0_E;
       //Receive buffer address
       rxBufferDesc[i][1] = address;
-      //Generate interrupts
-      rxBufferDesc[i][2] = ENET_RBD2_INT;
    }
 
    //Mark the last descriptor entry with the wrap flag
-   rxBufferDesc[i - 1][0] |= ENET_RBD0_W;
+   rxBufferDesc[i - 1][0] |= FEC_RBD0_W;
    //Initialize RX buffer index
    rxBufferIndex = 0;
 
    //Start location of the TX descriptor list
-   ENET_0->TDSR = (uint32_t) txBufferDesc;
+   FEC->ETDSR = (uint32_t) txBufferDesc;
    //Start location of the RX descriptor list
-   ENET_0->RDSR = (uint32_t) rxBufferDesc;
+   FEC->ERDSR = (uint32_t) rxBufferDesc;
    //Maximum receive buffer size
-   ENET_0->MRBR = MPC57XX_ETH_RX_BUFFER_SIZE;
+   FEC->EMRBR = MPC5777_ETH_RX_BUFFER_SIZE;
 }
 
 
 /**
- * @brief MPC57xx Ethernet MAC timer handler
+ * @brief MPC5777 Ethernet MAC timer handler
  *
  * This routine is periodically called by the TCP/IP stack to handle periodic
  * operations such as polling the link state
@@ -323,7 +266,7 @@ void mpc57xxEthInitBufferDesc(NetInterface *interface)
  * @param[in] interface Underlying network interface
  **/
 
-void mpc57xxEthTick(NetInterface *interface)
+void mpc5777EthTick(NetInterface *interface)
 {
    //Valid Ethernet PHY or switch driver?
    if(interface->phyDriver != NULL)
@@ -348,12 +291,12 @@ void mpc57xxEthTick(NetInterface *interface)
  * @param[in] interface Underlying network interface
  **/
 
-void mpc57xxEthEnableIrq(NetInterface *interface)
+void mpc5777EthEnableIrq(NetInterface *interface)
 {
    //Enable Ethernet MAC interrupts
-   INTC->PSR[ENET0_GROUP2_IRQn] |= INTC_PSR_PRC_SELN0_MASK;
-   INTC->PSR[ENET0_GROUP1_IRQn] |= INTC_PSR_PRC_SELN0_MASK;
-   INTC->PSR[ENET0_GROUP0_IRQn] |= INTC_PSR_PRC_SELN0_MASK;
+   INT_SYS_EnableIRQ(FEC_TXF_IRQn);
+   INT_SYS_EnableIRQ(FEC_RXF_IRQn);
+   INT_SYS_EnableIRQ(FEC_ERR_IRQn);
 
    //Valid Ethernet PHY or switch driver?
    if(interface->phyDriver != NULL)
@@ -378,12 +321,12 @@ void mpc57xxEthEnableIrq(NetInterface *interface)
  * @param[in] interface Underlying network interface
  **/
 
-void mpc57xxEthDisableIrq(NetInterface *interface)
+void mpc5777EthDisableIrq(NetInterface *interface)
 {
    //Disable Ethernet MAC interrupts
-   INTC->PSR[ENET0_GROUP2_IRQn] &= ~INTC_PSR_PRC_SELN0_MASK;
-   INTC->PSR[ENET0_GROUP1_IRQn] &= ~INTC_PSR_PRC_SELN0_MASK;
-   INTC->PSR[ENET0_GROUP0_IRQn] &= ~INTC_PSR_PRC_SELN0_MASK;
+   INT_SYS_DisableIRQ(FEC_TXF_IRQn);
+   INT_SYS_DisableIRQ(FEC_RXF_IRQn);
+   INT_SYS_DisableIRQ(FEC_ERR_IRQn);
 
    //Valid Ethernet PHY or switch driver?
    if(interface->phyDriver != NULL)
@@ -407,7 +350,7 @@ void mpc57xxEthDisableIrq(NetInterface *interface)
  * @brief Ethernet MAC transmit interrupt
  **/
 
-void ENET0_Tx_IRQHandler(void)
+void FEC_TXF_IRQHandler(void)
 {
    bool_t flag;
 
@@ -418,20 +361,20 @@ void ENET0_Tx_IRQHandler(void)
    flag = FALSE;
 
    //Packet transmitted?
-   if((ENET_0->EIR & ENET_EIR_TXF_MASK) != 0)
+   if((FEC->EIR & FEC_EIR_TXF_MASK) != 0)
    {
       //Clear TXF interrupt flag
-      ENET_0->EIR = ENET_EIR_TXF_MASK;
+      FEC->EIR = FEC_EIR_TXF_MASK;
 
       //Check whether the TX buffer is available for writing
-      if((txBufferDesc[txBufferIndex][0] & ENET_TBD0_R) == 0)
+      if((txBufferDesc[txBufferIndex][0] & FEC_TBD0_R) == 0)
       {
          //Notify the TCP/IP stack that the transmitter is ready to send
          flag = osSetEventFromIsr(&nicDriverInterface->nicTxEvent);
       }
 
       //Instruct the DMA to poll the transmit descriptor list
-      ENET_0->TDAR = ENET_TDAR_TDAR_MASK;
+      FEC->TDAR = FEC_TDAR_TDAR_MASK;
    }
 
    //Interrupt service routine epilogue
@@ -443,7 +386,7 @@ void ENET0_Tx_IRQHandler(void)
  * @brief Ethernet MAC receive interrupt
  **/
 
-void ENET0_Rx_IRQHandler(void)
+void FEC_RXF_IRQHandler(void)
 {
    bool_t flag;
 
@@ -454,10 +397,10 @@ void ENET0_Rx_IRQHandler(void)
    flag = FALSE;
 
    //Packet received?
-   if((ENET_0->EIR & ENET_EIR_RXF_MASK) != 0)
+   if((FEC->EIR & FEC_EIR_RXF_MASK) != 0)
    {
       //Disable RXF interrupt
-      ENET_0->EIMR &= ~ENET_EIMR_RXF_MASK;
+      FEC->EIMR &= ~FEC_EIMR_RXF_MASK;
 
       //Set event flag
       nicDriverInterface->nicEvent = TRUE;
@@ -474,7 +417,7 @@ void ENET0_Rx_IRQHandler(void)
  * @brief Ethernet MAC error interrupt
  **/
 
-void ENET0_Err_IRQHandler(void)
+void FEC_ERR_IRQHandler(void)
 {
    bool_t flag;
 
@@ -485,10 +428,10 @@ void ENET0_Err_IRQHandler(void)
    flag = FALSE;
 
    //System bus error?
-   if((ENET_0->EIR & ENET_EIR_EBERR_MASK) != 0)
+   if((FEC->EIR & FEC_EIR_EBERR_MASK) != 0)
    {
       //Disable EBERR interrupt
-      ENET_0->EIMR &= ~ENET_EIMR_EBERR_MASK;
+      FEC->EIMR &= ~FEC_EIMR_EBERR_MASK;
 
       //Set event flag
       nicDriverInterface->nicEvent = TRUE;
@@ -502,52 +445,52 @@ void ENET0_Err_IRQHandler(void)
 
 
 /**
- * @brief MPC57xx Ethernet MAC event handler
+ * @brief MPC5777 Ethernet MAC event handler
  * @param[in] interface Underlying network interface
  **/
 
-void mpc57xxEthEventHandler(NetInterface *interface)
+void mpc5777EthEventHandler(NetInterface *interface)
 {
    error_t error;
    uint32_t status;
 
    //Read interrupt event register
-   status = ENET_0->EIR;
+   status = FEC->EIR;
 
    //Packet received?
-   if((status & ENET_EIR_RXF_MASK) != 0)
+   if((status & FEC_EIR_RXF_MASK) != 0)
    {
       //Clear RXF interrupt flag
-      ENET_0->EIR = ENET_EIR_RXF_MASK;
+      FEC->EIR = FEC_EIR_RXF_MASK;
 
       //Process all pending packets
       do
       {
          //Read incoming packet
-         error = mpc57xxEthReceivePacket(interface);
+         error = mpc5777EthReceivePacket(interface);
 
          //No more data in the receive buffer?
       } while(error != ERROR_BUFFER_EMPTY);
    }
 
    //System bus error?
-   if((status & ENET_EIR_EBERR_MASK) != 0)
+   if((status & FEC_EIR_EBERR_MASK) != 0)
    {
       //Clear EBERR interrupt flag
-      ENET_0->EIR = ENET_EIR_EBERR_MASK;
+      FEC->EIR = FEC_EIR_EBERR_MASK;
 
       //Disable Ethernet MAC
-      ENET_0->ECR &= ~ENET_ECR_ETHEREN_MASK;
+      FEC->ECR &= ~FEC_ECR_ETHER_EN_MASK;
       //Reset buffer descriptors
-      mpc57xxEthInitBufferDesc(interface);
+      mpc5777EthInitBufferDesc(interface);
       //Resume normal operation
-      ENET_0->ECR |= ENET_ECR_ETHEREN_MASK;
+      FEC->ECR |= FEC_ECR_ETHER_EN_MASK;
       //Instruct the DMA to poll the receive descriptor list
-      ENET_0->RDAR = ENET_RDAR_RDAR_MASK;
+      FEC->RDAR = FEC_RDAR_RDAR_MASK;
    }
 
    //Re-enable Ethernet MAC interrupts
-   ENET_0->EIMR = ENET_EIMR_TXF_MASK | ENET_EIMR_RXF_MASK | ENET_EIMR_EBERR_MASK;
+   FEC->EIMR = FEC_EIMR_TXF_MASK | FEC_EIMR_RXF_MASK | FEC_EIMR_EBERR_MASK;
 }
 
 
@@ -561,7 +504,7 @@ void mpc57xxEthEventHandler(NetInterface *interface)
  * @return Error code
  **/
 
-error_t mpc57xxEthSendPacket(NetInterface *interface,
+error_t mpc5777EthSendPacket(NetInterface *interface,
    const NetBuffer *buffer, size_t offset, NetTxAncillary *ancillary)
 {
    size_t length;
@@ -570,7 +513,7 @@ error_t mpc57xxEthSendPacket(NetInterface *interface,
    length = netBufferGetLength(buffer) - offset;
 
    //Check the frame length
-   if(length > MPC57XX_ETH_TX_BUFFER_SIZE)
+   if(length > MPC5777_ETH_TX_BUFFER_SIZE)
    {
       //The transmitter can accept another packet
       osSetEvent(&interface->nicTxEvent);
@@ -579,7 +522,7 @@ error_t mpc57xxEthSendPacket(NetInterface *interface,
    }
 
    //Make sure the current buffer is available for writing
-   if((txBufferDesc[txBufferIndex][0] & ENET_TBD0_R) != 0)
+   if((txBufferDesc[txBufferIndex][0] & FEC_TBD0_R) != 0)
    {
       return ERROR_FAILURE;
    }
@@ -591,11 +534,11 @@ error_t mpc57xxEthSendPacket(NetInterface *interface,
    txBufferDesc[txBufferIndex][4] = 0;
 
    //Check current index
-   if(txBufferIndex < (MPC57XX_ETH_TX_BUFFER_COUNT - 1))
+   if(txBufferIndex < (MPC5777_ETH_TX_BUFFER_COUNT - 1))
    {
       //Give the ownership of the descriptor to the DMA engine
-      txBufferDesc[txBufferIndex][0] = ENET_TBD0_R | ENET_TBD0_L |
-         ENET_TBD0_TC | (length & ENET_TBD0_DATA_LENGTH);
+      txBufferDesc[txBufferIndex][0] = FEC_TBD0_R | FEC_TBD0_L |
+         FEC_TBD0_TC | (length & FEC_TBD0_DATA_LENGTH);
 
       //Point to the next buffer
       txBufferIndex++;
@@ -603,18 +546,18 @@ error_t mpc57xxEthSendPacket(NetInterface *interface,
    else
    {
       //Give the ownership of the descriptor to the DMA engine
-      txBufferDesc[txBufferIndex][0] = ENET_TBD0_R | ENET_TBD0_W |
-         ENET_TBD0_L | ENET_TBD0_TC | (length & ENET_TBD0_DATA_LENGTH);
+      txBufferDesc[txBufferIndex][0] = FEC_TBD0_R | FEC_TBD0_W |
+         FEC_TBD0_L | FEC_TBD0_TC | (length & FEC_TBD0_DATA_LENGTH);
 
       //Wrap around
       txBufferIndex = 0;
    }
 
    //Instruct the DMA to poll the transmit descriptor list
-   ENET_0->TDAR = ENET_TDAR_TDAR_MASK;
+   FEC->TDAR = FEC_TDAR_TDAR_MASK;
 
    //Check whether the next buffer is available for writing
-   if((txBufferDesc[txBufferIndex][0] & ENET_TBD0_R) == 0)
+   if((txBufferDesc[txBufferIndex][0] & FEC_TBD0_R) == 0)
    {
       //The transmitter can accept another packet
       osSetEvent(&interface->nicTxEvent);
@@ -631,26 +574,26 @@ error_t mpc57xxEthSendPacket(NetInterface *interface,
  * @return Error code
  **/
 
-error_t mpc57xxEthReceivePacket(NetInterface *interface)
+error_t mpc5777EthReceivePacket(NetInterface *interface)
 {
    error_t error;
    size_t n;
    NetRxAncillary ancillary;
 
    //Current buffer available for reading?
-   if((rxBufferDesc[rxBufferIndex][0] & ENET_RBD0_E) == 0)
+   if((rxBufferDesc[rxBufferIndex][0] & FEC_RBD0_E) == 0)
    {
       //The frame should not span multiple buffers
-      if((rxBufferDesc[rxBufferIndex][0] & ENET_RBD0_L) != 0)
+      if((rxBufferDesc[rxBufferIndex][0] & FEC_RBD0_L) != 0)
       {
          //Check whether an error occurred
-         if((rxBufferDesc[rxBufferIndex][0] & (ENET_RBD0_LG | ENET_RBD0_NO |
-            ENET_RBD0_CR | ENET_RBD0_OV | ENET_RBD0_TR)) == 0)
+         if((rxBufferDesc[rxBufferIndex][0] & (FEC_RBD0_LG | FEC_RBD0_NO |
+            FEC_RBD0_CR | FEC_RBD0_OV | FEC_RBD0_TR)) == 0)
          {
             //Retrieve the length of the frame
-            n = rxBufferDesc[rxBufferIndex][0] & ENET_RBD0_DATA_LENGTH;
+            n = rxBufferDesc[rxBufferIndex][0] & FEC_RBD0_DATA_LENGTH;
             //Limit the number of data to read
-            n = MIN(n, MPC57XX_ETH_RX_BUFFER_SIZE);
+            n = MIN(n, MPC5777_ETH_RX_BUFFER_SIZE);
 
             //Additional options can be passed to the stack along with the packet
             ancillary = NET_DEFAULT_RX_ANCILLARY;
@@ -677,23 +620,23 @@ error_t mpc57xxEthReceivePacket(NetInterface *interface)
       rxBufferDesc[rxBufferIndex][4] = 0;
 
       //Check current index
-      if(rxBufferIndex < (MPC57XX_ETH_RX_BUFFER_COUNT - 1))
+      if(rxBufferIndex < (MPC5777_ETH_RX_BUFFER_COUNT - 1))
       {
          //Give the ownership of the descriptor back to the DMA engine
-         rxBufferDesc[rxBufferIndex][0] = ENET_RBD0_E;
+         rxBufferDesc[rxBufferIndex][0] = FEC_RBD0_E;
          //Point to the next buffer
          rxBufferIndex++;
       }
       else
       {
          //Give the ownership of the descriptor back to the DMA engine
-         rxBufferDesc[rxBufferIndex][0] = ENET_RBD0_E | ENET_RBD0_W;
+         rxBufferDesc[rxBufferIndex][0] = FEC_RBD0_E | FEC_RBD0_W;
          //Wrap around
          rxBufferIndex = 0;
       }
 
       //Instruct the DMA to poll the receive descriptor list
-      ENET_0->RDAR = ENET_RDAR_RDAR_MASK;
+      FEC->RDAR = FEC_RDAR_RDAR_MASK;
    }
    else
    {
@@ -712,7 +655,7 @@ error_t mpc57xxEthReceivePacket(NetInterface *interface)
  * @return Error code
  **/
 
-error_t mpc57xxEthUpdateMacAddrFilter(NetInterface *interface)
+error_t mpc5777EthUpdateMacAddrFilter(NetInterface *interface)
 {
    uint_t i;
    uint_t k;
@@ -728,14 +671,14 @@ error_t mpc57xxEthUpdateMacAddrFilter(NetInterface *interface)
    //Set the MAC address of the station (upper 16 bits)
    value = interface->macAddr.b[5];
    value |= (interface->macAddr.b[4] << 8);
-   ENET_0->PAUR = ENET_PAUR_PADDR2(value) | ENET_PAUR_TYPE(0x8808);
+   FEC->PAUR = FEC_PAUR_PADDR2(value) | FEC_PAUR_TYPE(0x8808);
 
    //Set the MAC address of the station (lower 32 bits)
    value = interface->macAddr.b[3];
    value |= (interface->macAddr.b[2] << 8);
    value |= (interface->macAddr.b[1] << 16);
    value |= (interface->macAddr.b[0] << 24);
-   ENET_0->PALR = ENET_PALR_PADDR1(value);
+   FEC->PALR = FEC_PALR_PADDR1(value);
 
    //Clear hash table (unicast address filtering)
    unicastHashTable[0] = 0;
@@ -756,7 +699,7 @@ error_t mpc57xxEthUpdateMacAddrFilter(NetInterface *interface)
       if(entry->refCount > 0)
       {
          //Compute CRC over the current MAC address
-         crc = mpc57xxEthCalcCrc(&entry->addr, sizeof(MacAddr));
+         crc = mpc5777EthCalcCrc(&entry->addr, sizeof(MacAddr));
 
          //The upper 6 bits in the CRC register are used to index the
          //contents of the hash table
@@ -777,18 +720,18 @@ error_t mpc57xxEthUpdateMacAddrFilter(NetInterface *interface)
    }
 
    //Write the hash table (unicast address filtering)
-   ENET_0->IALR = unicastHashTable[0];
-   ENET_0->IAUR = unicastHashTable[1];
+   FEC->IALR = unicastHashTable[0];
+   FEC->IAUR = unicastHashTable[1];
 
    //Write the hash table (multicast address filtering)
-   ENET_0->GALR = multicastHashTable[0];
-   ENET_0->GAUR = multicastHashTable[1];
+   FEC->GALR = multicastHashTable[0];
+   FEC->GAUR = multicastHashTable[1];
 
    //Debug message
-   TRACE_DEBUG("  IALR = %08" PRIX32 "\r\n", ENET_0->IALR);
-   TRACE_DEBUG("  IAUR = %08" PRIX32 "\r\n", ENET_0->IAUR);
-   TRACE_DEBUG("  GALR = %08" PRIX32 "\r\n", ENET_0->GALR);
-   TRACE_DEBUG("  GAUR = %08" PRIX32 "\r\n", ENET_0->GAUR);
+   TRACE_DEBUG("  IALR = %08" PRIX32 "\r\n", FEC->IALR);
+   TRACE_DEBUG("  IAUR = %08" PRIX32 "\r\n", FEC->IAUR);
+   TRACE_DEBUG("  GALR = %08" PRIX32 "\r\n", FEC->GALR);
+   TRACE_DEBUG("  GAUR = %08" PRIX32 "\r\n", FEC->GAUR);
 
    //Successful processing
    return NO_ERROR;
@@ -801,46 +744,46 @@ error_t mpc57xxEthUpdateMacAddrFilter(NetInterface *interface)
  * @return Error code
  **/
 
-error_t mpc57xxEthUpdateMacConfig(NetInterface *interface)
+error_t mpc5777EthUpdateMacConfig(NetInterface *interface)
 {
    //Disable Ethernet MAC while modifying configuration registers
-   ENET_0->ECR &= ~ENET_ECR_ETHEREN_MASK;
+   FEC->ECR &= ~FEC_ECR_ETHER_EN_MASK;
 
    //10BASE-T or 100BASE-TX operation mode?
    if(interface->linkSpeed == NIC_LINK_SPEED_100MBPS)
    {
       //100 Mbps operation
-      ENET_0->RCR &= ~ENET_RCR_RMII_10T_MASK;
+      FEC->RCR &= ~FEC_RCR_RMII_10T_MASK;
    }
    else
    {
       //10 Mbps operation
-      ENET_0->RCR |= ENET_RCR_RMII_10T_MASK;
+      FEC->RCR |= FEC_RCR_RMII_10T_MASK;
    }
 
    //Half-duplex or full-duplex mode?
    if(interface->duplexMode == NIC_FULL_DUPLEX_MODE)
    {
       //Full-duplex mode
-      ENET_0->TCR |= ENET_TCR_FDEN_MASK;
+      FEC->TCR |= FEC_TCR_FDEN_MASK;
       //Receive path operates independently of transmit
-      ENET_0->RCR &= ~ENET_RCR_DRT_MASK;
+      FEC->RCR &= ~FEC_RCR_DRT_MASK;
    }
    else
    {
       //Half-duplex mode
-      ENET_0->TCR &= ~ENET_TCR_FDEN_MASK;
+      FEC->TCR &= ~FEC_TCR_FDEN_MASK;
       //Disable reception of frames while transmitting
-      ENET_0->RCR |= ENET_RCR_DRT_MASK;
+      FEC->RCR |= FEC_RCR_DRT_MASK;
    }
 
    //Reset buffer descriptors
-   mpc57xxEthInitBufferDesc(interface);
+   mpc5777EthInitBufferDesc(interface);
 
    //Re-enable Ethernet MAC
-   ENET_0->ECR |= ENET_ECR_ETHEREN_MASK;
+   FEC->ECR |= FEC_ECR_ETHER_EN_MASK;
    //Instruct the DMA to poll the receive descriptor list
-   ENET_0->RDAR = ENET_RDAR_RDAR_MASK;
+   FEC->RDAR = FEC_RDAR_RDAR_MASK;
 
    //Successful processing
    return NO_ERROR;
@@ -855,7 +798,7 @@ error_t mpc57xxEthUpdateMacConfig(NetInterface *interface)
  * @param[in] data Register value
  **/
 
-void mpc57xxEthWritePhyReg(uint8_t opcode, uint8_t phyAddr,
+void mpc5777EthWritePhyReg(uint8_t opcode, uint8_t phyAddr,
    uint8_t regAddr, uint16_t data)
 {
    uint32_t temp;
@@ -864,21 +807,21 @@ void mpc57xxEthWritePhyReg(uint8_t opcode, uint8_t phyAddr,
    if(opcode == SMI_OPCODE_WRITE)
    {
       //Set up a write operation
-      temp = ENET_MMFR_ST(1) | ENET_MMFR_OP(1) | ENET_MMFR_TA(2);
+      temp = FEC_MMFR_ST(1) | FEC_MMFR_OP(1) | FEC_MMFR_TA(2);
       //PHY address
-      temp |= ENET_MMFR_PA(phyAddr);
+      temp |= FEC_MMFR_PA(phyAddr);
       //Register address
-      temp |= ENET_MMFR_RA(regAddr);
+      temp |= FEC_MMFR_RA(regAddr);
       //Register value
-      temp |= ENET_MMFR_DATA(data);
+      temp |= FEC_MMFR_DATA(data);
 
       //Clear MII interrupt flag
-      ENET_0->EIR = ENET_EIR_MII_MASK;
+      FEC->EIR = FEC_EIR_MII_MASK;
       //Start a write operation
-      ENET_0->MMFR = temp;
+      FEC->MMFR = temp;
 
       //Wait for the write to complete
-      while((ENET_0->EIR & ENET_EIR_MII_MASK) == 0)
+      while((FEC->EIR & FEC_EIR_MII_MASK) == 0)
       {
       }
    }
@@ -897,7 +840,7 @@ void mpc57xxEthWritePhyReg(uint8_t opcode, uint8_t phyAddr,
  * @return Register value
  **/
 
-uint16_t mpc57xxEthReadPhyReg(uint8_t opcode, uint8_t phyAddr,
+uint16_t mpc5777EthReadPhyReg(uint8_t opcode, uint8_t phyAddr,
    uint8_t regAddr)
 {
    uint16_t data;
@@ -907,24 +850,24 @@ uint16_t mpc57xxEthReadPhyReg(uint8_t opcode, uint8_t phyAddr,
    if(opcode == SMI_OPCODE_READ)
    {
       //Set up a read operation
-      temp = ENET_MMFR_ST(1) | ENET_MMFR_OP(2) | ENET_MMFR_TA(2);
+      temp = FEC_MMFR_ST(1) | FEC_MMFR_OP(2) | FEC_MMFR_TA(2);
       //PHY address
-      temp |= ENET_MMFR_PA(phyAddr);
+      temp |= FEC_MMFR_PA(phyAddr);
       //Register address
-      temp |= ENET_MMFR_RA(regAddr);
+      temp |= FEC_MMFR_RA(regAddr);
 
       //Clear MII interrupt flag
-      ENET_0->EIR = ENET_EIR_MII_MASK;
+      FEC->EIR = FEC_EIR_MII_MASK;
       //Start a read operation
-      ENET_0->MMFR = temp;
+      FEC->MMFR = temp;
 
       //Wait for the read to complete
-      while((ENET_0->EIR & ENET_EIR_MII_MASK) == 0)
+      while((FEC->EIR & FEC_EIR_MII_MASK) == 0)
       {
       }
 
       //Get register value
-      data = ENET_0->MMFR & ENET_MMFR_DATA_MASK;
+      data = FEC->MMFR & FEC_MMFR_DATA_MASK;
    }
    else
    {
@@ -944,7 +887,7 @@ uint16_t mpc57xxEthReadPhyReg(uint8_t opcode, uint8_t phyAddr,
  * @return Resulting CRC value
  **/
 
-uint32_t mpc57xxEthCalcCrc(const void *data, size_t length)
+uint32_t mpc5777EthCalcCrc(const void *data, size_t length)
 {
    uint_t i;
    uint_t j;

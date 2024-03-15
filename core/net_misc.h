@@ -6,7 +6,7 @@
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  *
- * Copyright (C) 2010-2023 Oryx Embedded SARL. All rights reserved.
+ * Copyright (C) 2010-2024 Oryx Embedded SARL. All rights reserved.
  *
  * This file is part of CycloneTCP Open.
  *
@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.2.2
+ * @version 2.4.0
  **/
 
 #ifndef _NET_MISC_H
@@ -115,11 +115,10 @@ typedef struct
 struct _NetTxAncillary
 {
    uint8_t ttl;         ///<Time-to-live value
+   uint8_t tos;         ///<Type-of-service value
+   bool_t dontFrag;     ///<Do not fragment the IP packet
    bool_t dontRoute;    ///<Do not send the packet via a router
    bool_t routerAlert;  ///<Add an IP Router Alert option
-#if (IP_DIFF_SERV_SUPPORT == ENABLED)
-   uint8_t dscp;        ///<Differentiated services codepoint
-#endif
 #if (ETH_SUPPORT == ENABLED)
    MacAddr srcMacAddr;  ///<Source MAC address
    MacAddr destMacAddr; ///<Destination MAC address
@@ -150,6 +149,7 @@ struct _NetTxAncillary
 struct _NetRxAncillary
 {
    uint8_t ttl;            ///<Time-to-live value
+   uint8_t tos;            ///<Type-of-service value
 #if (ETH_SUPPORT == ENABLED)
    MacAddr srcMacAddr;     ///<Source MAC address
    MacAddr destMacAddr;    ///<Destination MAC address

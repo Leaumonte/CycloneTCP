@@ -6,7 +6,7 @@
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  *
- * Copyright (C) 2010-2023 Oryx Embedded SARL. All rights reserved.
+ * Copyright (C) 2010-2024 Oryx Embedded SARL. All rights reserved.
  *
  * This file is part of CycloneTCP Open.
  *
@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.2.2
+ * @version 2.4.0
  **/
 
 //Switch to the appropriate trace level
@@ -182,17 +182,20 @@ error_t sam3xEthInit(NetInterface *interface)
    //Clear transmit status register
    EMAC->EMAC_TSR = EMAC_TSR_UND | EMAC_TSR_COMP | EMAC_TSR_BEX |
       EMAC_TSR_TGO | EMAC_TSR_RLES | EMAC_TSR_COL | EMAC_TSR_UBR;
+
    //Clear receive status register
    EMAC->EMAC_RSR = EMAC_RSR_OVR | EMAC_RSR_REC | EMAC_RSR_BNA;
 
    //First disable all EMAC interrupts
    EMAC->EMAC_IDR = 0xFFFFFFFF;
+
    //Only the desired ones are enabled
    EMAC->EMAC_IER = EMAC_IER_ROVR | EMAC_IER_TCOMP | EMAC_IER_TXERR |
       EMAC_IER_RLE | EMAC_IER_TUND | EMAC_IER_RXUBR | EMAC_IER_RCOMP;
 
-   //Read EMAC ISR register to clear any pending interrupt
+   //Read EMAC_ISR register to clear any pending interrupt
    status = EMAC->EMAC_ISR;
+   (void) status;
 
    //Set priority grouping (4 bits for pre-emption priority, no bits for subpriority)
    NVIC_SetPriorityGrouping(SAM3X_ETH_IRQ_PRIORITY_GROUPING);
@@ -395,6 +398,7 @@ void EMAC_Handler(void)
    isr = EMAC->EMAC_ISR;
    tsr = EMAC->EMAC_TSR;
    rsr = EMAC->EMAC_RSR;
+   (void) isr;
 
    //Packet transmitted?
    if((tsr & (EMAC_TSR_UND | EMAC_TSR_COMP | EMAC_TSR_BEX |
@@ -535,7 +539,7 @@ error_t sam3xEthSendPacket(NetInterface *interface,
 
 error_t sam3xEthReceivePacket(NetInterface *interface)
 {
-   static uint8_t temp[ETH_MAX_FRAME_SIZE];
+   static uint32_t temp[ETH_MAX_FRAME_SIZE / 4];
    error_t error;
    uint_t i;
    uint_t j;
@@ -545,7 +549,8 @@ error_t sam3xEthReceivePacket(NetInterface *interface)
    size_t size;
    size_t length;
 
-   //Initialize SOF and EOF indices
+   //Initialize variables
+   size = 0;
    sofIndex = UINT_MAX;
    eofIndex = UINT_MAX;
 
@@ -615,7 +620,7 @@ error_t sam3xEthReceivePacket(NetInterface *interface)
          //Calculate the number of bytes to read at a time
          n = MIN(size, SAM3X_ETH_RX_BUFFER_SIZE);
          //Copy data from receive buffer
-         osMemcpy(temp + length, rxBuffer[rxBufferIndex], n);
+         osMemcpy((uint8_t *) temp + length, rxBuffer[rxBufferIndex], n);
          //Update byte counters
          length += n;
          size -= n;
@@ -643,7 +648,7 @@ error_t sam3xEthReceivePacket(NetInterface *interface)
       ancillary = NET_DEFAULT_RX_ANCILLARY;
 
       //Pass the packet to the upper layer
-      nicProcessPacket(interface, temp, length, &ancillary);
+      nicProcessPacket(interface, (uint8_t *) temp, length, &ancillary);
       //Valid packet received
       error = NO_ERROR;
    }

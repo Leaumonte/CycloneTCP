@@ -6,7 +6,7 @@
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  *
- * Copyright (C) 2010-2023 Oryx Embedded SARL. All rights reserved.
+ * Copyright (C) 2010-2024 Oryx Embedded SARL. All rights reserved.
  *
  * This file is part of CycloneTCP Open.
  *
@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.2.2
+ * @version 2.4.0
  **/
 
 #ifndef _ARP_H
@@ -44,7 +44,7 @@
 //Size of ARP cache
 #ifndef ARP_CACHE_SIZE
    #define ARP_CACHE_SIZE 8
-#elif (ARP_CACHE_SIZE < 4)
+#elif (ARP_CACHE_SIZE < 1)
    #error ARP_CACHE_SIZE parameter is not valid
 #endif
 
@@ -135,8 +135,10 @@ typedef enum
 } ArpState;
 
 
-//CodeWarrior or Win32 compiler?
-#if defined(__CWCC__) || defined(_WIN32)
+//CC-RX, CodeWarrior or Win32 compiler?
+#if defined(__CCRX__)
+   #pragma pack
+#elif defined(__CWCC__) || defined(_WIN32)
    #pragma pack(push, 1)
 #endif
 
@@ -145,7 +147,7 @@ typedef enum
  * @brief ARP packet
  **/
 
-typedef __start_packed struct
+typedef __packed_struct
 {
    uint16_t hrd; //0-1
    uint16_t pro; //2-3
@@ -156,11 +158,13 @@ typedef __start_packed struct
    Ipv4Addr spa; //14-17
    MacAddr tha;  //18-23
    Ipv4Addr tpa; //24-27
-} __end_packed ArpPacket;
+} ArpPacket;
 
 
-//CodeWarrior or Win32 compiler?
-#if defined(__CWCC__) || defined(_WIN32)
+//CC-RX, CodeWarrior or Win32 compiler?
+#if defined(__CCRX__)
+   #pragma unpack
+#elif defined(__CWCC__) || defined(_WIN32)
    #pragma pack(pop)
 #endif
 
@@ -199,13 +203,12 @@ extern systime_t arpTickCounter;
 
 //ARP related functions
 error_t arpInit(NetInterface *interface);
-void arpFlushCache(NetInterface *interface);
+error_t arpEnable(NetInterface *interface, bool_t enable);
 
-ArpCacheEntry *arpCreateEntry(NetInterface *interface);
-ArpCacheEntry *arpFindEntry(NetInterface *interface, Ipv4Addr ipAddr);
+error_t arpAddStaticEntry(NetInterface *interface, Ipv4Addr ipAddr,
+   const MacAddr *macAddr);
 
-void arpSendQueuedPackets(NetInterface *interface, ArpCacheEntry *entry);
-void arpFlushQueuedPackets(NetInterface *interface, ArpCacheEntry *entry);
+error_t arpRemoveStaticEntry(NetInterface *interface, Ipv4Addr ipAddr);
 
 error_t arpResolve(NetInterface *interface, Ipv4Addr ipAddr, MacAddr *macAddr);
 
@@ -218,7 +221,7 @@ void arpProcessPacket(NetInterface *interface, ArpPacket *arpPacket,
    size_t length);
 
 void arpProcessRequest(NetInterface *interface, ArpPacket *arpRequest);
-void arpProcessReply(NetInterface *interface, ArpPacket *arpResponse);
+void arpProcessReply(NetInterface *interface, ArpPacket *arpReply);
 
 error_t arpSendProbe(NetInterface *interface, Ipv4Addr targetIpAddr);
 

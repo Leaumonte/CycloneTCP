@@ -6,7 +6,7 @@
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  *
- * Copyright (C) 2010-2023 Oryx Embedded SARL. All rights reserved.
+ * Copyright (C) 2010-2024 Oryx Embedded SARL. All rights reserved.
  *
  * This file is part of CycloneTCP Open.
  *
@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.2.2
+ * @version 2.4.0
  **/
 
 //Switch to the appropriate trace level
@@ -40,6 +40,12 @@
 #include "ipv6/ipv6.h"
 #include "ipv6/ipv6_misc.h"
 #include "debug.h"
+
+//IPsec supported?
+#if (IPV4_IPSEC_SUPPORT == ENABLED)
+   #include "ipsec/ipsec.h"
+   #include "ah/ah.h"
+#endif
 
 //Special IP addresses
 const IpAddr IP_ADDR_ANY = {0};
@@ -57,8 +63,9 @@ const IpAddr IP_ADDR_UNSPECIFIED = {0};
  * @return Error code
  **/
 
-error_t ipSendDatagram(NetInterface *interface, IpPseudoHeader *pseudoHeader,
-   NetBuffer *buffer, size_t offset, NetTxAncillary *ancillary)
+error_t ipSendDatagram(NetInterface *interface,
+   const IpPseudoHeader *pseudoHeader, NetBuffer *buffer, size_t offset,
+   NetTxAncillary *ancillary)
 {
    error_t error;
 
@@ -107,8 +114,8 @@ error_t ipSendDatagram(NetInterface *interface, IpPseudoHeader *pseudoHeader,
  * @return Error code
  **/
 
-error_t ipSelectSourceAddr(NetInterface **interface,
-   const IpAddr *destAddr, IpAddr *srcAddr)
+error_t ipSelectSourceAddr(NetInterface **interface, const IpAddr *destAddr,
+   IpAddr *srcAddr)
 {
    error_t error;
 
@@ -186,7 +193,7 @@ bool_t ipIsUnspecifiedAddr(const IpAddr *ipAddr)
 #endif
    //Invalid IP address?
    {
-      result = FALSE;
+      result = TRUE;
    }
 
    //Return TRUE if the IP address is unspecified, else FALSE
@@ -271,6 +278,34 @@ bool_t ipIsMulticastAddr(const IpAddr *ipAddr)
 
 
 /**
+ * @brief Determine whether an IP address is a broadcast address
+ * @param[in] ipAddr IP address
+ * @return TRUE if the IP address is a broadcast address, else FALSE
+ **/
+
+bool_t ipIsBroadcastAddr(const IpAddr *ipAddr)
+{
+   bool_t result;
+
+#if (IPV4_SUPPORT == ENABLED)
+   //Broadcast address?
+   if(ipAddr->length == sizeof(Ipv4Addr) &&
+      ipAddr->ipv4Addr == IPV4_BROADCAST_ADDR)
+   {
+      result = TRUE;
+   }
+   else
+#endif
+   {
+      result = FALSE;
+   }
+
+   //Return TRUE if the IP address is a broadcast address, else FALSE
+   return result;
+}
+
+
+/**
  * @brief Compare IP addresses
  * @param[in] ipAddr1 First IP address
  * @param[in] ipAddr2 Second IP address
@@ -330,7 +365,7 @@ bool_t ipCompAddr(const IpAddr *ipAddr1, const IpAddr *ipAddr2)
  * @return TRUE if the prefixes match each other, else FALSE
  **/
 
-bool_t ipCompPrefix(const IpAddr * ipAddr1, const IpAddr * ipAddr2,
+bool_t ipCompPrefix(const IpAddr *ipAddr1, const IpAddr *ipAddr2,
    size_t length)
 {
    bool_t result;
@@ -376,10 +411,9 @@ error_t ipJoinMulticastGroup(NetInterface *interface, const IpAddr *groupAddr)
 
    //Use default network interface?
    if(interface == NULL)
+   {
       interface = netGetDefaultInterface();
-
-   //Get exclusive access
-   osAcquireMutex(&netMutex);
+   }
 
 #if (IPV4_SUPPORT == ENABLED)
    //IPv4 multicast address?
@@ -405,9 +439,6 @@ error_t ipJoinMulticastGroup(NetInterface *interface, const IpAddr *groupAddr)
       error = ERROR_INVALID_ADDRESS;
    }
 
-   //Release exclusive access
-   osReleaseMutex(&netMutex);
-
    //Return status code
    return error;
 }
@@ -426,10 +457,9 @@ error_t ipLeaveMulticastGroup(NetInterface *interface, const IpAddr *groupAddr)
 
    //Use default network interface?
    if(interface == NULL)
+   {
       interface = netGetDefaultInterface();
-
-   //Get exclusive access
-   osAcquireMutex(&netMutex);
+   }
 
 #if (IPV4_SUPPORT == ENABLED)
    //IPv4 multicast address?
@@ -453,9 +483,6 @@ error_t ipLeaveMulticastGroup(NetInterface *interface, const IpAddr *groupAddr)
    {
       error = ERROR_INVALID_ADDRESS;
    }
-
-   //Release exclusive access
-   osReleaseMutex(&netMutex);
 
    //Return status code
    return error;
@@ -725,6 +752,11 @@ NetBuffer *ipAllocBuffer(size_t length, size_t *offset)
 #else
    //Maximum overhead when using IPv4
    headerLen = sizeof(Ipv4Header) + sizeof(uint32_t);
+#endif
+
+#if (IPV4_IPSEC_SUPPORT == ENABLED && AH_SUPPORT == ENABLED)
+   //Maximum overhead caused by AH security protocol
+   headerLen += AH_MAX_OVERHEAD;
 #endif
 
 #if (ETH_SUPPORT == ENABLED)

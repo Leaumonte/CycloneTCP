@@ -6,7 +6,7 @@
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  *
- * Copyright (C) 2010-2023 Oryx Embedded SARL. All rights reserved.
+ * Copyright (C) 2010-2024 Oryx Embedded SARL. All rights reserved.
  *
  * This file is part of CycloneTCP Open.
  *
@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.2.2
+ * @version 2.4.0
  **/
 
 //Switch to the appropriate trace level
@@ -35,8 +35,8 @@
 #include "core/net.h"
 #include "core/nic.h"
 #include "core/ethernet.h"
-#include "ipv4/ipv4.h"
-#include "ipv6/ipv6.h"
+#include "ipv4/ipv4_misc.h"
+#include "ipv6/ipv6_misc.h"
 #include "debug.h"
 
 //Tick counter to handle periodic operations
@@ -424,6 +424,16 @@ void nicProcessPacket(NetInterface *interface, uint8_t *packet, size_t length,
       {
          //Process incoming PPP frame
          pppProcessFrame(interface, packet, length, ancillary);
+      }
+      else
+#endif
+#if (IPV4_SUPPORT == ENABLED)
+      //IPv4 interface?
+      if(type == NIC_TYPE_IPV4)
+      {
+         //Process incoming IPv4 packet
+         ipv4ProcessPacket(interface, (Ipv4Header *) packet, length,
+            ancillary);
       }
       else
 #endif

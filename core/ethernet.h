@@ -6,7 +6,7 @@
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  *
- * Copyright (C) 2010-2023 Oryx Embedded SARL. All rights reserved.
+ * Copyright (C) 2010-2024 Oryx Embedded SARL. All rights reserved.
  *
  * This file is part of CycloneTCP Open.
  *
@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.2.2
+ * @version 2.4.0
  **/
 
 #ifndef _ETHERNET_H
@@ -173,8 +173,10 @@ typedef enum
 } EthType;
 
 
-//CodeWarrior or Win32 compiler?
-#if defined(__CWCC__) || defined(_WIN32)
+//CC-RX, CodeWarrior or Win32 compiler?
+#if defined(__CCRX__)
+   #pragma pack
+#elif defined(__CWCC__) || defined(_WIN32)
    #pragma pack(push, 1)
 #endif
 
@@ -183,69 +185,71 @@ typedef enum
  * @brief MAC address
  **/
 
-typedef __start_packed struct
+typedef __packed_struct
 {
-   __start_packed union
+   __packed_union
    {
       uint8_t b[6];
       uint16_t w[3];
    };
-} __end_packed MacAddr;
+} MacAddr;
 
 
 /**
  * @brief EUI-64 identifier
  **/
 
-typedef __start_packed struct
+typedef __packed_struct
 {
-   __start_packed union
+   __packed_union
    {
       uint8_t b[8];
       uint16_t w[4];
       uint32_t dw[2];
    };
-} __end_packed Eui64;
+} Eui64;
 
 
 /**
  * @brief Ethernet frame header
  **/
 
-typedef __start_packed struct
+typedef __packed_struct
 {
    MacAddr destAddr; //0-5
    MacAddr srcAddr;  //6-11
    uint16_t type;    //12-13
    uint8_t data[];   //14
-} __end_packed EthHeader;
+} EthHeader;
 
 
 /**
  * @brief LLC header
  **/
 
-typedef __start_packed struct
+typedef __packed_struct
 {
    uint8_t dsap;    //0
    uint8_t ssap;    //1
    uint8_t control; //2
-} __end_packed LlcHeader;
+} LlcHeader;
 
 
 /**
  * @brief VLAN tag
  **/
 
-typedef __start_packed struct
+typedef __packed_struct
 {
    uint16_t tci;  //0-1
    uint16_t type; //2-3
-} __end_packed VlanTag;
+} VlanTag;
 
 
-//CodeWarrior or Win32 compiler?
-#if defined(__CWCC__) || defined(_WIN32)
+//CC-RX, CodeWarrior or Win32 compiler?
+#if defined(__CCRX__)
+   #pragma unpack
+#elif defined(__CWCC__) || defined(_WIN32)
    #pragma pack(pop)
 #endif
 

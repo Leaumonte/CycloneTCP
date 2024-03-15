@@ -6,7 +6,7 @@
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  *
- * Copyright (C) 2010-2023 Oryx Embedded SARL. All rights reserved.
+ * Copyright (C) 2010-2024 Oryx Embedded SARL. All rights reserved.
  *
  * This file is part of CycloneTCP Open.
  *
@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.2.2
+ * @version 2.4.0
  **/
 
 //Switch to the appropriate trace level
@@ -252,6 +252,10 @@ void modbusServerProcessConnectionEvents(ModbusClientConnection *connection)
             //Modbus request successfully received?
             if(connection->requestAduPos >= connection->requestAduLen)
             {
+#if (MODBUS_SERVER_DIAG_SUPPORT == ENABLED)
+               //Total number of messages received
+               context->rxMessageCount++;
+#endif
                //Check unit identifier
                if(context->settings.unitId == 0 ||
                   context->settings.unitId == 255 ||
@@ -289,6 +293,10 @@ void modbusServerProcessConnectionEvents(ModbusClientConnection *connection)
             //Modbus response successfully sent?
             if(connection->responseAduPos >= connection->responseAduLen)
             {
+#if (MODBUS_SERVER_DIAG_SUPPORT == ENABLED)
+               //Total number of messages sent
+               context->txMessageCount++;
+#endif
                //Flush receive buffer
                connection->requestAduLen = 0;
                connection->requestAduPos = 0;
@@ -324,6 +332,11 @@ void modbusServerProcessConnectionEvents(ModbusClientConnection *connection)
    //Any communication error?
    if(error != NO_ERROR && error != ERROR_TIMEOUT)
    {
+#if (MODBUS_SERVER_DIAG_SUPPORT == ENABLED)
+      //Total number of communication errors
+      context->commErrorCount++;
+#endif
+
       //Close the Modbus/TCP connection
       modbusServerCloseConnection(connection);
    }
@@ -455,9 +468,13 @@ void *modbusServerGetRequestPdu(ModbusClientConnection *connection,
 
    //Retrieve the length of the PDU
    if(connection->requestAduLen >= sizeof(ModbusHeader))
+   {
       *length = connection->requestAduLen - sizeof(ModbusHeader);
+   }
    else
+   {
       *length = 0;
+   }
 
    //Return a pointer to the request PDU
    return requestPdu;

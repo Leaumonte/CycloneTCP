@@ -6,7 +6,7 @@
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  *
- * Copyright (C) 2010-2023 Oryx Embedded SARL. All rights reserved.
+ * Copyright (C) 2010-2024 Oryx Embedded SARL. All rights reserved.
  *
  * This file is part of CycloneTCP Open.
  *
@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.2.2
+ * @version 2.4.0
  **/
 
 //Switch to the appropriate trace level
@@ -745,7 +745,7 @@ error_t tms570EthSendPacket(NetInterface *interface,
 
 error_t tms570EthReceivePacket(NetInterface *interface)
 {
-   static uint8_t buffer[TMS570_ETH_RX_BUFFER_SIZE];
+   static uint32_t buffer[TMS570_ETH_RX_BUFFER_SIZE / 4];
    error_t error;
    size_t n;
    uint32_t temp;
@@ -827,7 +827,7 @@ error_t tms570EthReceivePacket(NetInterface *interface)
       ancillary = NET_DEFAULT_RX_ANCILLARY;
 
       //Pass the packet to the upper layer
-      nicProcessPacket(interface, buffer, n, &ancillary);
+      nicProcessPacket(interface, (uint8_t *) buffer, n, &ancillary);
    }
 
    //Return status code

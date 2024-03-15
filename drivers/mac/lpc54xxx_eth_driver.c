@@ -6,7 +6,7 @@
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  *
- * Copyright (C) 2010-2023 Oryx Embedded SARL. All rights reserved.
+ * Copyright (C) 2010-2024 Oryx Embedded SARL. All rights reserved.
  *
  * This file is part of CycloneTCP Open.
  *
@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.2.2
+ * @version 2.4.0
  **/
 
 //Switch to the appropriate trace level
@@ -188,7 +188,7 @@ error_t lpc54xxxEthInit(NetInterface *interface)
    ENET->MAC_RX_FLOW_CTRL = 0;
 
    //Enable the first RX queue
-   ENET->MAC_RXQ_CTRL[0] = ENET_MAC_RXQ_CTRL_RXQ0EN(1);
+   ENET->MAC_RXQ_CTRL[0] = ENET_MAC_RXQ_CTRL_RXQ0EN(2);
 
    //Configure DMA operating mode
    ENET->DMA_MODE = ENET_DMA_MODE_PR(0);
@@ -198,10 +198,10 @@ error_t lpc54xxxEthInit(NetInterface *interface)
    //The DMA takes the descriptor table as contiguous
    ENET->DMA_CH[0].DMA_CHX_CTRL = ENET_DMA_CH_DMA_CHX_CTRL_DSL(0);
    //Configure TX features
-   ENET->DMA_CH[0].DMA_CHX_TX_CTRL = ENET_DMA_CH_DMA_CHX_TX_CTRL_TxPBL(1);
+   ENET->DMA_CH[0].DMA_CHX_TX_CTRL = ENET_DMA_CH_DMA_CHX_TX_CTRL_TxPBL(32);
 
    //Configure RX features
-   ENET->DMA_CH[0].DMA_CHX_RX_CTRL = ENET_DMA_CH_DMA_CHX_RX_CTRL_RxPBL(1) |
+   ENET->DMA_CH[0].DMA_CHX_RX_CTRL = ENET_DMA_CH_DMA_CHX_RX_CTRL_RxPBL(32) |
       ENET_DMA_CH_DMA_CHX_RX_CTRL_RBSZ(LPC54XXX_ETH_RX_BUFFER_SIZE / 4);
 
    //Enable store and forward mode for transmission
@@ -549,8 +549,8 @@ void ETHERNET_IRQHandler(void)
    //Packet received?
    if((status & ENET_DMA_CH_DMA_CHX_STAT_RI_MASK) != 0)
    {
-      //Disable RIE interrupt
-      ENET->DMA_CH[0].DMA_CHX_INT_EN &= ~ENET_DMA_CH_DMA_CHX_INT_EN_RIE_MASK;
+      //Clear RI interrupt flag
+      ENET->DMA_CH[0].DMA_CHX_STAT = ENET_DMA_CH_DMA_CHX_STAT_RI_MASK;
 
       //Set event flag
       nicDriverInterface->nicEvent = TRUE;
@@ -575,25 +575,14 @@ void lpc54xxxEthEventHandler(NetInterface *interface)
 {
    error_t error;
 
-   //Packet received?
-   if((ENET->DMA_CH[0].DMA_CHX_STAT & ENET_DMA_CH_DMA_CHX_STAT_RI_MASK) != 0)
+   //Process all pending packets
+   do
    {
-      //Clear interrupt flag
-      ENET->DMA_CH[0].DMA_CHX_STAT = ENET_DMA_CH_DMA_CHX_STAT_RI_MASK;
+      //Read incoming packet
+      error = lpc54xxxEthReceivePacket(interface);
 
-      //Process all pending packets
-      do
-      {
-         //Read incoming packet
-         error = lpc54xxxEthReceivePacket(interface);
-
-         //No more data in the receive buffer?
-      } while(error != ERROR_BUFFER_EMPTY);
-   }
-
-   //Re-enable DMA interrupts
-   ENET->DMA_CH[0].DMA_CHX_INT_EN = ENET_DMA_CH_DMA_CHX_INT_EN_NIE_MASK |
-      ENET_DMA_CH_DMA_CHX_INT_EN_RIE_MASK | ENET_DMA_CH_DMA_CHX_INT_EN_TIE_MASK;
+      //No more data in the receive buffer?
+   } while(error != ERROR_BUFFER_EMPTY);
 }
 
 

@@ -6,7 +6,7 @@
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  *
- * Copyright (C) 2010-2023 Oryx Embedded SARL. All rights reserved.
+ * Copyright (C) 2010-2024 Oryx Embedded SARL. All rights reserved.
  *
  * This file is part of CycloneTCP Open.
  *
@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.2.2
+ * @version 2.4.0
  **/
 
 //Switch to the appropriate trace level
@@ -183,7 +183,7 @@ error_t stm32mp1xxEthInit(NetInterface *interface)
    ETH->MACRXFCR = 0;
 
    //Enable the first RX queue
-   ETH->MACRXQC0R = ETH_MACRXQC0R_RXQ0EN_Val(1);
+   ETH->MACRXQC0R = ETH_MACRXQC0R_RXQ0EN_Val(2);
 
    //Configure DMA operating mode
    ETH->DMAMR = ETH_DMAMR_INTM_Val(0) | ETH_DMAMR_PR_Val(0);
@@ -193,10 +193,10 @@ error_t stm32mp1xxEthInit(NetInterface *interface)
    //The DMA takes the descriptor table as contiguous
    ETH->DMAC0CR = ETH_DMAC0CR_DSL_Val(0);
    //Configure TX features
-   ETH->DMAC0TXCR = ETH_DMAC0TXCR_TXPBL_Val(1);
+   ETH->DMAC0TXCR = ETH_DMAC0TXCR_TXPBL_Val(32);
 
    //Configure RX features
-   ETH->DMAC0RXCR = ETH_DMAC0RXCR_RXPBL_Val(1) |
+   ETH->DMAC0RXCR = ETH_DMAC0RXCR_RXPBL_Val(32) |
       ETH_DMAC0RXCR_RBSZ_Val(STM32MP1XX_ETH_RX_BUFFER_SIZE);
 
    //Enable store and forward mode for transmission

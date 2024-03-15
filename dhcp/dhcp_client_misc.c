@@ -6,7 +6,7 @@
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  *
- * Copyright (C) 2010-2023 Oryx Embedded SARL. All rights reserved.
+ * Copyright (C) 2010-2024 Oryx Embedded SARL. All rights reserved.
  *
  * This file is part of CycloneTCP Open.
  *
@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.2.2
+ * @version 2.4.0
  **/
 
 //Switch to the appropriate trace level
@@ -64,8 +64,8 @@ const uint8_t dhcpOptionList[] =
 /**
  * @brief DHCP client timer handler
  *
- * This routine must be periodically called by the TCP/IP stack to
- * manage DHCP client operation
+ * This routine must be periodically called by the TCP/IP stack to manage
+ * DHCP client operation
  *
  * @param[in] context Pointer to the DHCP client context
  **/
@@ -1239,8 +1239,8 @@ void dhcpClientCheckTimeout(DhcpClientContext *context)
 /**
  * @brief Compute the appropriate secs field
  *
- * Compute the number of seconds elapsed since the client began
- * address acquisition or renewal process
+ * Compute the number of seconds elapsed since the client began address
+ * acquisition or renewal process
  *
  * @param[in] context Pointer to the DHCP client context
  * @return The elapsed time expressed in seconds

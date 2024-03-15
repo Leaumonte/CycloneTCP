@@ -6,7 +6,7 @@
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  *
- * Copyright (C) 2010-2023 Oryx Embedded SARL. All rights reserved.
+ * Copyright (C) 2010-2024 Oryx Embedded SARL. All rights reserved.
  *
  * This file is part of CycloneTCP Open.
  *
@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.2.2
+ * @version 2.4.0
  **/
 
 //Switch to the appropriate trace level
@@ -212,6 +212,9 @@ error_t enc28j60Init(NetInterface *interface)
    //Set RXEN to enable reception
    enc28j60SetBit(interface, ENC28J60_ECON1, ENC28J60_ECON1_RXEN);
 
+   //Perform custom configuration
+   enc28j60InitHook(interface);
+
    //Dump registers for debugging purpose
    enc28j60DumpReg(interface);
    enc28j60DumpPhyReg(interface);
@@ -226,6 +229,16 @@ error_t enc28j60Init(NetInterface *interface)
 
    //Successful initialization
    return NO_ERROR;
+}
+
+
+/**
+ * @brief ENC28J60 custom configuration
+ * @param[in] interface Underlying network interface
+ **/
+
+__weak_func void enc28j60InitHook(NetInterface *interface)
+{
 }
 
 

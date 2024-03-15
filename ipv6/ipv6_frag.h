@@ -6,7 +6,7 @@
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  *
- * Copyright (C) 2010-2023 Oryx Embedded SARL. All rights reserved.
+ * Copyright (C) 2010-2024 Oryx Embedded SARL. All rights reserved.
  *
  * This file is part of CycloneTCP Open.
  *
@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.2.2
+ * @version 2.4.0
  **/
 
 #ifndef _IPV6_FRAG_H
@@ -44,7 +44,7 @@
 
 //Support for overlapping fragments
 #ifndef IPV6_OVERLAPPING_FRAG_SUPPORT
-   #define IPV6_OVERLAPPING_FRAG_SUPPORT ENABLED
+   #define IPV6_OVERLAPPING_FRAG_SUPPORT DISABLED
 #elif (IPV6_OVERLAPPING_FRAG_SUPPORT != ENABLED && IPV6_OVERLAPPING_FRAG_SUPPORT != DISABLED)
    #error IPV6_OVERLAPPING_FRAG_SUPPORT parameter is not valid
 #endif
@@ -87,8 +87,10 @@ extern "C" {
 #endif
 
 
-//CodeWarrior or Win32 compiler?
-#if defined(__CWCC__) || defined(_WIN32)
+//CC-RX, CodeWarrior or Win32 compiler?
+#if defined(__CCRX__)
+   #pragma pack
+#elif defined(__CWCC__) || defined(_WIN32)
    #pragma pack(push, 1)
 #endif
 
@@ -97,16 +99,18 @@ extern "C" {
  * @brief Hole descriptor
  **/
 
-typedef __start_packed struct
+typedef __packed_struct
 {
    uint16_t first;
    uint16_t last;
    uint16_t next;
-} __end_packed Ipv6HoleDesc;
+} Ipv6HoleDesc;
 
 
-//CodeWarrior or Win32 compiler?
-#if defined(__CWCC__) || defined(_WIN32)
+//CC-RX, CodeWarrior or Win32 compiler?
+#if defined(__CCRX__)
+   #pragma unpack
+#elif defined(__CWCC__) || defined(_WIN32)
    #pragma pack(pop)
 #endif
 
@@ -143,7 +147,7 @@ extern systime_t ipv6FragTickCounter;
 
 //IPv6 datagram fragmentation and reassembly
 error_t ipv6FragmentDatagram(NetInterface *interface,
-   Ipv6PseudoHeader *pseudoHeader, const NetBuffer *payload,
+   const Ipv6PseudoHeader *pseudoHeader, const NetBuffer *payload,
    size_t payloadOffset, size_t pathMtu, NetTxAncillary *ancillary);
 
 void ipv6ParseFragmentHeader(NetInterface *interface, const NetBuffer *ipPacket,

@@ -6,7 +6,7 @@
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  *
- * Copyright (C) 2010-2023 Oryx Embedded SARL. All rights reserved.
+ * Copyright (C) 2010-2024 Oryx Embedded SARL. All rights reserved.
  *
  * This file is part of CycloneTCP Open.
  *
@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.2.2
+ * @version 2.4.0
  **/
 
 #ifndef _NET_H
@@ -93,13 +93,13 @@ struct _NetInterface;
 #endif
 
 //Version string
-#define CYCLONE_TCP_VERSION_STRING "2.2.2"
+#define CYCLONE_TCP_VERSION_STRING "2.4.0"
 //Major version
 #define CYCLONE_TCP_MAJOR_VERSION 2
 //Minor version
-#define CYCLONE_TCP_MINOR_VERSION 2
+#define CYCLONE_TCP_MINOR_VERSION 4
 //Revision number
-#define CYCLONE_TCP_REV_NUMBER 2
+#define CYCLONE_TCP_REV_NUMBER 0
 
 //RTOS support
 #ifndef NET_RTOS_SUPPORT
@@ -210,6 +210,7 @@ struct _NetInterface
    uint32_t linkSpeed;                            ///<Link speed
    NicDuplexMode duplexMode;                      ///<Duplex mode
    bool_t configured;                             ///<Configuration done
+   systime_t initialRto;                          ///<TCP initial retransmission timeout
 
 #if (ETH_SUPPORT == ENABLED)
    const PhyDriver *phyDriver;                    ///<Ethernet PHY driver
@@ -243,6 +244,7 @@ struct _NetInterface
 #if (IPV4_SUPPORT == ENABLED)
    Ipv4Context ipv4Context;                       ///<IPv4 context
 #if (ETH_SUPPORT == ENABLED)
+   bool_t enableArp;                              ///<Enable address resolution using ARP
    ArpCacheEntry arpCache[ARP_CACHE_SIZE];        ///<ARP cache
 #endif
 #if (IGMP_HOST_SUPPORT == ENABLED)
@@ -296,6 +298,16 @@ struct _NetInterface
 
 
 /**
+ * @brief TCP/IP stack settings
+ **/
+
+typedef struct
+{
+   OsTaskParameters task; ///<Task parameters
+} NetSettings;
+
+
+/**
  * @brief TCP/IP stack context
  **/
 
@@ -304,11 +316,8 @@ typedef struct
    OsMutex mutex;                                ///<Mutex preventing simultaneous access to the TCP/IP stack
    OsEvent event;                                ///<Event object to receive notifications from drivers
    bool_t running;                               ///<The TCP/IP stack is currently running
+   OsTaskParameters taskParams;                  ///<Task parameters
    OsTaskId taskId;                              ///<Task identifier
-#if (OS_STATIC_TASK_SUPPORT == ENABLED)
-   OsTaskTcb taskTcb;                            ///<Task control block
-   OsStackType taskStack[NET_TASK_STACK_SIZE];   ///<Task stack
-#endif
    uint32_t entropy;
    systime_t timestamp;
    uint8_t randSeed[NET_RAND_SEED_SIZE];         ///<Random seed
@@ -316,6 +325,10 @@ typedef struct
    NetInterface interfaces[NET_INTERFACE_COUNT]; ///<Network interfaces
    NetLinkChangeCallbackEntry linkChangeCallbacks[NET_MAX_LINK_CHANGE_CALLBACKS];
    NetTimerCallbackEntry timerCallbacks[NET_MAX_TIMER_CALLBACKS];
+#if (IPV4_IPSEC_SUPPORT == ENABLED)
+   void *ipsecContext;                           ///<IPsec context
+   void *ikeContext;                             ///<IKE context
+#endif
 } NetContext;
 
 
@@ -323,7 +336,11 @@ typedef struct
 extern NetContext netContext;
 
 //TCP/IP stack related functions
+void netGetDefaultSettings(NetSettings *settings);
 error_t netInit(void);
+error_t netInitEx(NetContext *context, const NetSettings *settings);
+
+error_t netStart(NetContext *context);
 
 error_t netSeedRand(const uint8_t *seed, size_t length);
 uint32_t netGetRand(void);
@@ -374,6 +391,7 @@ error_t netStartInterface(NetInterface *interface);
 error_t netStopInterface(NetInterface *interface);
 
 void netTask(void);
+void netTaskEx(NetContext *context);
 
 //C++ guard
 #ifdef __cplusplus

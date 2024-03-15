@@ -6,7 +6,7 @@
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  *
- * Copyright (C) 2010-2023 Oryx Embedded SARL. All rights reserved.
+ * Copyright (C) 2010-2024 Oryx Embedded SARL. All rights reserved.
  *
  * This file is part of CycloneTCP Open.
  *
@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.2.2
+ * @version 2.4.0
  **/
 
 //Switch to the appropriate trace level
@@ -299,7 +299,7 @@ bool_t adin2111IrqHandler(NetInterface *interface)
    //Read interrupt status registers
    status0 = adin2111ReadReg(interface, ADIN2111_STATUS0);
    status1 = adin2111ReadReg(interface, ADIN2111_STATUS1);
-      
+
    //PHY interrupt on port 1?
    if((status0 & ADIN2111_STATUS0_PHYINT) != 0)
    {
@@ -420,7 +420,7 @@ void adin2111EventHandler(NetInterface *interface)
 
       phyStatus = adin2111ReadMmdReg(interface, ADIN2111_PORT2,
          ADIN2111_PHY_SUBSYS_IRQ_STATUS);
-      
+
       //Link status change on port2?
       if((phyStatus & ADIN2111_PHY_SUBSYS_IRQ_STATUS_LINK_STAT_CHNG_LH) != 0)
       {

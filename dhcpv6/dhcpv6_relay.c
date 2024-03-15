@@ -6,7 +6,7 @@
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  *
- * Copyright (C) 2010-2023 Oryx Embedded SARL. All rights reserved.
+ * Copyright (C) 2010-2024 Oryx Embedded SARL. All rights reserved.
  *
  * This file is part of CycloneTCP Open.
  *
@@ -31,7 +31,7 @@
  * alongside a routing function in a common node. Refer to RFC 3315
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.2.2
+ * @version 2.4.0
  **/
 
 //Switch to the appropriate trace level
@@ -90,6 +90,10 @@ error_t dhcpv6RelayStart(Dhcpv6RelayContext *context, const Dhcpv6RelaySettings 
    //Clear the DHCPv6 relay agent context
    osMemset(context, 0, sizeof(Dhcpv6RelayContext));
 
+   //Initialize task parameters
+   context->taskParams = settings->task;
+   context->taskId = OS_INVALID_TASK_ID;
+
    //Save the network-facing interface
    context->serverInterface = settings->serverInterface;
    //Save the number of client-facing interfaces
@@ -97,7 +101,9 @@ error_t dhcpv6RelayStart(Dhcpv6RelayContext *context, const Dhcpv6RelaySettings 
 
    //Save all the client-facing interfaces
    for(i = 0; i < context->clientInterfaceCount; i++)
+   {
       context->clientInterface[i] = settings->clientInterface[i];
+   }
 
    //Save the address to be used when relaying client messages to the server
    context->serverAddress = settings->serverAddress;
@@ -202,17 +208,9 @@ error_t dhcpv6RelayStart(Dhcpv6RelayContext *context, const Dhcpv6RelaySettings 
       //The DHCPv6 relay agent is now running
       context->running = TRUE;
 
-#if (OS_STATIC_TASK_SUPPORT == ENABLED)
-      //Create a task using statically allocated memory
-      context->taskId = osCreateStaticTask("DHCPv6 Relay",
-         (OsTaskCode) dhcpv6RelayTask, context, &context->taskTcb,
-         context->taskStack, DHCPV6_RELAY_STACK_SIZE, DHCPV6_RELAY_PRIORITY);
-#else
       //Create a task
       context->taskId = osCreateTask("DHCPv6 Relay",
-         (OsTaskCode) dhcpv6RelayTask, context, DHCPV6_RELAY_STACK_SIZE,
-         DHCPV6_RELAY_PRIORITY);
-#endif
+         (OsTaskCode) dhcpv6RelayTask, context, &context->taskParams);
 
       //Failed to create task?
       if(context->taskId == OS_INVALID_TASK_ID)
@@ -507,8 +505,8 @@ error_t dhcpv6ForwardClientMessage(Dhcpv6RelayContext *context, uint_t index)
    //Message received from another relay agent?
    case DHCPV6_MSG_TYPE_RELAY_FORW:
       //If the message received by the relay agent is a Relay-Forward message
-      //and the hop-count in the message is greater than or equal to 32, the
-      //relay agent discards the received message
+      //and the hop-count in the message is greater than or equal to
+      //HOP_COUNT_LIMIT, the relay agent discards the received message
       if(inputMessage->hopCount >= DHCPV6_HOP_COUNT_LIMIT)
          return ERROR_INVALID_MESSAGE;
       //Set the hop-count field to the value of the hop-count field in
@@ -657,9 +655,13 @@ error_t dhcpv6ForwardRelayReplyMessage(Dhcpv6RelayContext *context)
 
          //Select the relevant port number to use
          if(outputMessage->msgType == DHCPV6_MSG_TYPE_RELAY_REPL)
+         {
             port = DHCPV6_SERVER_PORT;
+         }
          else
+         {
             port = DHCPV6_CLIENT_PORT;
+         }
 
          //Relay the DHCPv6 message to the client on the link
          //identified by the Interface ID option

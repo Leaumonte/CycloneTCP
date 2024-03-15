@@ -6,7 +6,7 @@
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  *
- * Copyright (C) 2010-2023 Oryx Embedded SARL. All rights reserved.
+ * Copyright (C) 2010-2024 Oryx Embedded SARL. All rights reserved.
  *
  * This file is part of CycloneTCP Open.
  *
@@ -30,14 +30,13 @@
  * underlying transport provider
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.2.2
+ * @version 2.4.0
  **/
 
 //Switch to the appropriate trace level
 #define TRACE_LEVEL RAW_SOCKET_TRACE_LEVEL
 
 //Dependencies
-#include <string.h>
 #include "core/net.h"
 #include "core/socket.h"
 #include "core/raw_socket.h"
@@ -66,8 +65,8 @@
  **/
 
 error_t rawSocketProcessIpPacket(NetInterface *interface,
-   IpPseudoHeader *pseudoHeader, const NetBuffer *buffer, size_t offset,
-   NetRxAncillary *ancillary)
+   const IpPseudoHeader *pseudoHeader, const NetBuffer *buffer, size_t offset,
+   const NetRxAncillary *ancillary)
 {
    uint_t i;
    size_t length;
@@ -87,6 +86,7 @@ error_t rawSocketProcessIpPacket(NetInterface *interface,
       //Raw socket found?
       if(socket->type != SOCKET_TYPE_RAW_IP)
          continue;
+
       //Check whether the socket is bound to a particular interface
       if(socket->interface && socket->interface != interface)
          continue;
@@ -95,22 +95,60 @@ error_t rawSocketProcessIpPacket(NetInterface *interface,
       //IPv4 packet received?
       if(pseudoHeader->length == sizeof(Ipv4PseudoHeader))
       {
+         //Check whether the socket is restricted to IPv6 communications only
+         if((socket->options & SOCKET_OPTION_IPV6_ONLY) != 0)
+            continue;
+
          //Check protocol field
          if(socket->protocol != pseudoHeader->ipv4Data.protocol)
             continue;
 
-         //Destination IP address filtering
-         if(socket->localIpAddr.length != 0)
+         //Check whether the destination address is a unicast, broadcast or
+         //multicast address
+         if(ipv4IsBroadcastAddr(interface, pseudoHeader->ipv4Data.destAddr))
          {
-            //An IPv4 address is expected
-            if(socket->localIpAddr.length != sizeof(Ipv4Addr))
+            //Check whether broadcast datagrams are accepted or not
+            if((socket->options & SOCKET_OPTION_BROADCAST) == 0)
                continue;
+         }
+         else if(ipv4IsMulticastAddr(pseudoHeader->ipv4Data.destAddr))
+         {
+            uint_t j;
+            IpAddr *group;
 
-            //Filter out non-matching addresses
-            if(socket->localIpAddr.ipv4Addr != IPV4_UNSPECIFIED_ADDR &&
-               socket->localIpAddr.ipv4Addr != pseudoHeader->ipv4Data.destAddr)
+            //Loop through multicast groups
+            for(j = 0; j < SOCKET_MAX_MULTICAST_GROUPS; j++)
             {
+               //Point to the current multicast group
+               group = &socket->multicastGroups[j];
+
+               //Matching multicast address?
+               if(group->length == sizeof(Ipv4Addr) &&
+                  group->ipv4Addr == pseudoHeader->ipv4Data.destAddr)
+               {
+                  break;
+               }
+            }
+
+            //Filter out non-matching multicast addresses
+            if(j >= SOCKET_MAX_MULTICAST_GROUPS)
                continue;
+         }
+         else
+         {
+            //Destination IP address filtering
+            if(socket->localIpAddr.length != 0)
+            {
+               //An IPv4 address is expected
+               if(socket->localIpAddr.length != sizeof(Ipv4Addr))
+                  continue;
+
+               //Filter out non-matching addresses
+               if(socket->localIpAddr.ipv4Addr != IPV4_UNSPECIFIED_ADDR &&
+                  socket->localIpAddr.ipv4Addr != pseudoHeader->ipv4Data.destAddr)
+               {
+                  continue;
+               }
             }
          }
 
@@ -320,7 +358,7 @@ error_t rawSocketProcessIpPacket(NetInterface *interface,
  **/
 
 void rawSocketProcessEthPacket(NetInterface *interface, const uint8_t *data,
-   size_t length, NetRxAncillary *ancillary)
+   size_t length, const NetRxAncillary *ancillary)
 {
 #if (ETH_SUPPORT == ENABLED)
    uint_t i;
@@ -360,48 +398,73 @@ void rawSocketProcessEthPacket(NetInterface *interface, const uint8_t *data,
             continue;
       }
 
-      //The current socket meets all the criteria
-      break;
-   }
-
-   //Drop incoming packet if no matching socket was found
-   if(i >= SOCKET_MAX_COUNT)
-      return;
-
-   //Empty receive queue?
-   if(socket->receiveQueue == NULL)
-   {
-      //Allocate a memory buffer to hold the data and the associated descriptor
-      p = netBufferAlloc(sizeof(SocketQueueItem) + length);
-
-      //Successful memory allocation?
-      if(p != NULL)
+      //Empty receive queue?
+      if(socket->receiveQueue == NULL)
       {
-         //Point to the newly created item
-         queueItem = netBufferAt(p, 0);
-         queueItem->buffer = p;
-         //Add the newly created item to the queue
-         socket->receiveQueue = queueItem;
+         //Allocate a memory buffer to hold the data and the associated
+         //descriptor
+         p = netBufferAlloc(sizeof(SocketQueueItem) + length);
+
+         //Successful memory allocation?
+         if(p != NULL)
+         {
+            //Point to the newly created item
+            queueItem = netBufferAt(p, 0);
+            queueItem->buffer = p;
+            //Add the newly created item to the queue
+            socket->receiveQueue = queueItem;
+         }
+         else
+         {
+            //Memory allocation failed
+            queueItem = NULL;
+         }
       }
       else
       {
-         //Memory allocation failed
-         queueItem = NULL;
-      }
-   }
-   else
-   {
-      //Point to the very first item
-      queueItem = socket->receiveQueue;
+         //Point to the very first item
+         queueItem = socket->receiveQueue;
 
-      //Reach the last item in the receive queue
-      for(i = 1; queueItem->next; i++)
-      {
-         queueItem = queueItem->next;
+         //Reach the last item in the receive queue
+         for(i = 1; queueItem->next; i++)
+         {
+            queueItem = queueItem->next;
+         }
+
+         //Check whether the receive queue is full
+         if(i >= RAW_SOCKET_RX_QUEUE_SIZE)
+         {
+            //Number of inbound packets which were chosen to be discarded even
+            //though no errors had been detected
+            MIB2_IF_INC_COUNTER32(ifTable[interface->index].ifInDiscards, 1);
+            IF_MIB_INC_COUNTER32(ifTable[interface->index].ifInDiscards, 1);
+
+            //Exit immediately
+            break;
+         }
+
+         //Allocate a memory buffer to hold the data and the associated
+         //descriptor
+         p = netBufferAlloc(sizeof(SocketQueueItem) + length);
+
+         //Successful memory allocation?
+         if(p != NULL)
+         {
+            //Add the newly created item to the queue
+            queueItem->next = netBufferAt(p, 0);
+            //Point to the newly created item
+            queueItem = queueItem->next;
+            queueItem->buffer = p;
+         }
+         else
+         {
+            //Memory allocation failed
+            queueItem = NULL;
+         }
       }
 
-      //Check whether the receive queue is full
-      if(i >= RAW_SOCKET_RX_QUEUE_SIZE)
+      //Not enough resources to properly handle the packet?
+      if(queueItem == NULL)
       {
          //Number of inbound packets which were chosen to be discarded even
          //though no errors had been detected
@@ -409,61 +472,31 @@ void rawSocketProcessEthPacket(NetInterface *interface, const uint8_t *data,
          IF_MIB_INC_COUNTER32(ifTable[interface->index].ifInDiscards, 1);
 
          //Exit immediately
-         return;
+         break;
       }
 
-      //Allocate a memory buffer to hold the data and the associated descriptor
-      p = netBufferAlloc(sizeof(SocketQueueItem) + length);
+      //Initialize next field
+      queueItem->next = NULL;
+      //Network interface where the packet was received
+      queueItem->interface = interface;
 
-      //Successful memory allocation?
-      if(p != NULL)
-      {
-         //Add the newly created item to the queue
-         queueItem->next = netBufferAt(p, 0);
-         //Point to the newly created item
-         queueItem = queueItem->next;
-         queueItem->buffer = p;
-      }
-      else
-      {
-         //Memory allocation failed
-         queueItem = NULL;
-      }
+      //Other fields are meaningless
+      queueItem->srcPort = 0;
+      queueItem->srcIpAddr = IP_ADDR_ANY;
+      queueItem->destIpAddr = IP_ADDR_ANY;
+
+      //Offset to the raw datagram
+      queueItem->offset = sizeof(SocketQueueItem);
+
+      //Copy the payload
+      netBufferWrite(queueItem->buffer, queueItem->offset, data, length);
+
+      //Additional options can be passed to the stack along with the packet
+      queueItem->ancillary = *ancillary;
+
+      //Notify user that data is available
+      rawSocketUpdateEvents(socket);
    }
-
-   //Not enough resources to properly handle the packet?
-   if(queueItem == NULL)
-   {
-      //Number of inbound packets which were chosen to be discarded even
-      //though no errors had been detected
-      MIB2_IF_INC_COUNTER32(ifTable[interface->index].ifInDiscards, 1);
-      IF_MIB_INC_COUNTER32(ifTable[interface->index].ifInDiscards, 1);
-
-      //Exit immediately
-      return;
-   }
-
-   //Initialize next field
-   queueItem->next = NULL;
-   //Network interface where the packet was received
-   queueItem->interface = interface;
-
-   //Other fields are meaningless
-   queueItem->srcPort = 0;
-   queueItem->srcIpAddr = IP_ADDR_ANY;
-   queueItem->destIpAddr = IP_ADDR_ANY;
-
-   //Offset to the raw datagram
-   queueItem->offset = sizeof(SocketQueueItem);
-
-   //Copy the payload
-   netBufferWrite(queueItem->buffer, queueItem->offset, data, length);
-
-   //Additional options can be passed to the stack along with the packet
-   queueItem->ancillary = *ancillary;
-
-   //Notify user that data is available
-   rawSocketUpdateEvents(socket);
 #endif
 }
 
@@ -496,7 +529,7 @@ error_t rawSocketSendIpPacket(Socket *socket, const SocketMsg *message,
       interface = socket->interface;
    }
 
-   //Allocate a buffer memory to hold the raw IP datagram
+   //Allocate a buffer to hold the raw IP datagram
    buffer = ipAllocBuffer(0, &offset);
    //Failed to allocate memory?
    if(buffer == NULL)
@@ -583,6 +616,22 @@ error_t rawSocketSendIpPacket(Socket *socket, const SocketMsg *message,
          ancillary.ttl = socket->ttl;
       }
 
+      //This flag can be used to send IP packets without fragmentation
+      if(message->destIpAddr.length == sizeof(Ipv4Addr) &&
+         (socket->options & SOCKET_OPTION_IPV4_DONT_FRAG) != 0)
+      {
+         ancillary.dontFrag = TRUE;
+      }
+      else if(message->destIpAddr.length == sizeof(Ipv6Addr) &&
+         (socket->options & SOCKET_OPTION_IPV6_DONT_FRAG) != 0)
+      {
+         ancillary.dontFrag = TRUE;
+      }
+      else
+      {
+         ancillary.dontFrag = message->dontFrag;
+      }
+
       //This flag tells the stack that the destination is on a locally attached
       //network and not to perform a lookup of the routing table
       if((flags & SOCKET_FLAG_DONT_ROUTE) != 0)
@@ -590,10 +639,15 @@ error_t rawSocketSendIpPacket(Socket *socket, const SocketMsg *message,
          ancillary.dontRoute = TRUE;
       }
 
-#if (IP_DIFF_SERV_SUPPORT == ENABLED)
-      //Set DSCP field
-      ancillary.dscp = socket->dscp;
-#endif
+      //Set ToS field
+      if(message->tos != 0)
+      {
+         ancillary.tos = message->tos;
+      }
+      else
+      {
+         ancillary.tos = socket->tos;
+      }
 
 #if (ETH_SUPPORT == ENABLED)
       //Set source and destination MAC addresses
@@ -680,7 +734,7 @@ error_t rawSocketSendEthPacket(Socket *socket, const SocketMsg *message,
    if(interface->nicDriver != NULL &&
       interface->nicDriver->type == NIC_TYPE_ETHERNET)
    {
-      //Allocate a buffer memory to hold the raw Ethernet packet
+      //Allocate a buffer to hold the raw Ethernet packet
       buffer = ethAllocBuffer(0, &offset);
       //Failed to allocate buffer?
       if(buffer == NULL)
@@ -789,6 +843,8 @@ error_t rawSocketReceiveIpPacket(Socket *socket, SocketMsg *message,
 
       //Save TTL value
       message->ttl = queueItem->ancillary.ttl;
+      //Save ToS field
+      message->tos = queueItem->ancillary.tos;
 
 #if (ETH_SUPPORT == ENABLED)
       //Save source and destination MAC addresses

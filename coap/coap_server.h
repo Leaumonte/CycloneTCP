@@ -6,7 +6,7 @@
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  *
- * Copyright (C) 2010-2023 Oryx Embedded SARL. All rights reserved.
+ * Copyright (C) 2010-2024 Oryx Embedded SARL. All rights reserved.
  *
  * This file is part of CycloneTCP Open.
  *
@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.2.2
+ * @version 2.4.0
  **/
 
 #ifndef _COAP_SERVER_H
@@ -126,8 +126,16 @@ struct _CoapDtlsSession;
 
 //C++ guard
 #ifdef __cplusplus
-   extern "C" {
+extern "C" {
 #endif
+
+
+/**
+ * @brief UDP initialization callback function
+ **/
+
+typedef error_t (*CoapServerUdpInitCallback)(CoapServerContext *context,
+   Socket *socket);
 
 
 //DTLS supported?
@@ -157,8 +165,10 @@ typedef error_t (*CoapServerRequestCallback)(CoapServerContext *context,
 
 typedef struct
 {
+   OsTaskParameters task;                       ///<Task parameters
    NetInterface *interface;                     ///<Underlying network interface
    uint16_t port;                               ///<CoAP port number
+   CoapServerUdpInitCallback udpInitCallback;   ///<UDP initialization callback
 #if (COAP_SERVER_DTLS_SUPPORT == ENABLED)
    CoapServerDtlsInitCallback dtlsInitCallback; ///<DTLS initialization callback
 #endif
@@ -193,11 +203,8 @@ struct _CoapServerContext
    bool_t running;                                           ///<Operational state of the CoAP server
    bool_t stop;                                              ///<Stop request
    OsEvent event;                                            ///<Event object used to poll the underlying socket
+   OsTaskParameters taskParams;                              ///<Task parameters
    OsTaskId taskId;                                          ///<Task identifier
-#if (OS_STATIC_TASK_SUPPORT == ENABLED)
-   OsTaskTcb taskTcb;                                        ///<Task control block
-   OsStackType taskStack[COAP_SERVER_STACK_SIZE];            ///<Task stack
-#endif
    Socket *socket;                                           ///<Underlying socket
    IpAddr serverIpAddr;                                      ///<Server's IP address
    IpAddr clientIpAddr;                                      ///<Client's IP address
@@ -234,7 +241,7 @@ void coapServerDeinit(CoapServerContext *context);
 
 //C++ guard
 #ifdef __cplusplus
-   }
+}
 #endif
 
 #endif

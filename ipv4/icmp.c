@@ -6,7 +6,7 @@
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  *
- * Copyright (C) 2010-2023 Oryx Embedded SARL. All rights reserved.
+ * Copyright (C) 2010-2024 Oryx Embedded SARL. All rights reserved.
  *
  * This file is part of CycloneTCP Open.
  *
@@ -25,14 +25,13 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.2.2
+ * @version 2.4.0
  **/
 
 //Switch to the appropriate trace level
 #define TRACE_LEVEL ICMP_TRACE_LEVEL
 
 //Dependencies
-#include <string.h>
 #include "core/net.h"
 #include "core/ip.h"
 #include "ipv4/ipv4.h"
@@ -47,6 +46,61 @@
 
 
 /**
+ * @brief Enable support for ICMP Echo Request messages
+ * @param[in] interface Underlying network interface
+ * @param[in] enable This flag specifies whether the host will respond to
+ *   ICMP Echo Requests. When the flag is set to FALSE, incoming ICMP Echo
+ *   Request messages will be dropped
+ * @return Error code
+ **/
+
+error_t icmpEnableEchoRequests(NetInterface *interface, bool_t enable)
+{
+   //Check parameters
+   if(interface == NULL)
+      return ERROR_INVALID_PARAMETER;
+
+   //Get exclusive access
+   osAcquireMutex(&netMutex);
+   //Enable or disable support for Echo Request messages
+   interface->ipv4Context.enableEchoReq = enable;
+   //Release exclusive access
+   osReleaseMutex(&netMutex);
+
+   //Successful processing
+   return NO_ERROR;
+}
+
+
+/**
+ * @brief Enable support for broadcast ICMP Echo Request messages
+ * @param[in] interface Underlying network interface
+ * @param[in] enable This flag specifies whether the host will respond to
+ *   broadcast ICMP Echo Requests. When the flag is set to FALSE, incoming ICMP
+ *   Echo Request messages destined to a broadcast address will be dropped
+ * @return Error code
+ **/
+
+error_t icmpEnableBroadcastEchoRequests(NetInterface *interface,
+   bool_t enable)
+{
+   //Check parameters
+   if(interface == NULL)
+      return ERROR_INVALID_PARAMETER;
+
+   //Get exclusive access
+   osAcquireMutex(&netMutex);
+   //Enable or disable support for broadcast Echo Request messages
+   interface->ipv4Context.enableBroadcastEchoReq = enable;
+   //Release exclusive access
+   osReleaseMutex(&netMutex);
+
+   //Successful processing
+   return NO_ERROR;
+}
+
+
+/**
  * @brief Incoming ICMP message processing
  * @param[in] interface Underlying network interface
  * @param[in] requestPseudoHeader IPv4 pseudo header
@@ -55,7 +109,7 @@
  **/
 
 void icmpProcessMessage(NetInterface *interface,
-   Ipv4PseudoHeader *requestPseudoHeader, const NetBuffer *buffer,
+   const Ipv4PseudoHeader *requestPseudoHeader, const NetBuffer *buffer,
    size_t offset)
 {
    size_t length;
@@ -117,6 +171,7 @@ void icmpProcessMessage(NetInterface *interface,
       //Process Echo Request message
       icmpProcessEchoRequest(interface, requestPseudoHeader, buffer, offset);
       break;
+
    //Unknown type?
    default:
       //Debug message
@@ -136,7 +191,7 @@ void icmpProcessMessage(NetInterface *interface,
  **/
 
 void icmpProcessEchoRequest(NetInterface *interface,
-   Ipv4PseudoHeader *requestPseudoHeader, const NetBuffer *request,
+   const Ipv4PseudoHeader *requestPseudoHeader, const NetBuffer *request,
    size_t requestOffset)
 {
    error_t error;
@@ -165,6 +220,11 @@ void icmpProcessEchoRequest(NetInterface *interface,
    TRACE_INFO("ICMP Echo Request message received (%" PRIuSIZE " bytes)...\r\n", requestLength);
    //Dump message contents for debugging purpose
    icmpDumpEchoMessage(requestHeader);
+
+   //If support for Echo Request messages has been explicitly disabled, then
+   //the host shall not respond to the incoming request
+   if(!interface->ipv4Context.enableEchoReq)
+      return;
 
    //Check whether the destination address of the Echo Request message is
    //a broadcast or a multicast address
@@ -275,8 +335,9 @@ void icmpProcessEchoRequest(NetInterface *interface,
  * @return Error code
  **/
 
-error_t icmpSendErrorMessage(NetInterface *interface, uint8_t type, uint8_t code,
-   uint8_t parameter, const NetBuffer *ipPacket, size_t ipPacketOffset)
+error_t icmpSendErrorMessage(NetInterface *interface, uint8_t type,
+   uint8_t code, uint8_t parameter, const NetBuffer *ipPacket,
+   size_t ipPacketOffset)
 {
    error_t error;
    size_t offset;

@@ -6,7 +6,7 @@
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  *
- * Copyright (C) 2010-2023 Oryx Embedded SARL. All rights reserved.
+ * Copyright (C) 2010-2024 Oryx Embedded SARL. All rights reserved.
  *
  * This file is part of CycloneTCP Open.
  *
@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.2.2
+ * @version 2.4.0
  **/
 
 //Switch to the appropriate trace level
@@ -35,8 +35,11 @@
 #include "esp_intr_alloc.h"
 #include "soc/dport_reg.h"
 #include "soc/dport_access.h"
+#include "soc/io_mux_reg.h"
+#include "soc/gpio_sig_map.h"
 #include "driver/gpio.h"
-#include "driver/periph_ctrl.h"
+#include "rom/gpio.h"
+#include "esp_private/periph_ctrl.h"
 #include "core/net.h"
 #include "drivers/mac/esp32_eth_driver.h"
 #include "debug.h"
@@ -165,8 +168,8 @@ error_t esp32EthInit(NetInterface *interface)
       EMAC_DMAOPERATION_MODE_TX_STORE_FORWARD;
 
    //Configure DMA bus mode
-   EMAC_DMABUSMODE_REG = EMAC_DMABUSMODE_RX_DMA_PBL_1 |
-      EMAC_DMABUSMODE_PROG_BURST_LEN_1 | EMAC_DMABUSMODE_ALT_DESC_SIZE;
+   EMAC_DMABUSMODE_REG = EMAC_DMABUSMODE_RX_DMA_PBL_32 |
+      EMAC_DMABUSMODE_PROG_BURST_LEN_32 | EMAC_DMABUSMODE_ALT_DESC_SIZE;
 
    //Initialize DMA descriptor lists
    esp32EthInitDmaDesc(interface);

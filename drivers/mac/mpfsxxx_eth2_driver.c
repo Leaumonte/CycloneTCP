@@ -6,7 +6,7 @@
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  *
- * Copyright (C) 2010-2023 Oryx Embedded SARL. All rights reserved.
+ * Copyright (C) 2010-2024 Oryx Embedded SARL. All rights reserved.
  *
  * This file is part of CycloneTCP Open.
  *
@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.2.2
+ * @version 2.4.0
  **/
 
 //Switch to the appropriate trace level
@@ -220,6 +220,7 @@ error_t mpfsxxxEth2Init(NetInterface *interface)
 
    //Read interrupt status register to clear any pending interrupt
    temp = MAC1->INT_STATUS;
+   (void) temp;
 
    //Configure interrupt priority
    PLIC_SetPriority(MAC1_INT_PLIC, MPFSXXX_ETH2_IRQ_PRIORITY);
@@ -479,6 +480,7 @@ uint8_t mac1_int_plic_IRQHandler(void)
    isr = MAC1->INT_STATUS;
    tsr = MAC1->TRANSMIT_STATUS;
    rsr = MAC1->RECEIVE_STATUS;
+   (void) isr;
 
    //Packet transmitted?
    if((tsr & (GEM_TX_RESP_NOT_OK | GEM_STAT_TRANSMIT_UNDER_RUN |
@@ -625,7 +627,7 @@ error_t mpfsxxxEth2SendPacket(NetInterface *interface,
 
 error_t mpfsxxxEth2ReceivePacket(NetInterface *interface)
 {
-   static uint8_t temp[ETH_MAX_FRAME_SIZE];
+   static uint32_t temp[ETH_MAX_FRAME_SIZE / 4];
    error_t error;
    uint_t i;
    uint_t j;
@@ -635,7 +637,8 @@ error_t mpfsxxxEth2ReceivePacket(NetInterface *interface)
    size_t size;
    size_t length;
 
-   //Initialize SOF and EOF indices
+   //Initialize variables
+   size = 0;
    sofIndex = UINT_MAX;
    eofIndex = UINT_MAX;
 
@@ -705,7 +708,7 @@ error_t mpfsxxxEth2ReceivePacket(NetInterface *interface)
          //Calculate the number of bytes to read at a time
          n = MIN(size, MPFSXXX_ETH2_RX_BUFFER_SIZE);
          //Copy data from receive buffer
-         osMemcpy(temp + length, rxBuffer[rxBufferIndex], n);
+         osMemcpy((uint8_t *) temp + length, rxBuffer[rxBufferIndex], n);
          //Update byte counters
          length += n;
          size -= n;
@@ -733,7 +736,7 @@ error_t mpfsxxxEth2ReceivePacket(NetInterface *interface)
       ancillary = NET_DEFAULT_RX_ANCILLARY;
 
       //Pass the packet to the upper layer
-      nicProcessPacket(interface, temp, length, &ancillary);
+      nicProcessPacket(interface, (uint8_t *) temp, length, &ancillary);
       //Valid packet received
       error = NO_ERROR;
    }

@@ -6,7 +6,7 @@
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  *
- * Copyright (C) 2010-2023 Oryx Embedded SARL. All rights reserved.
+ * Copyright (C) 2010-2024 Oryx Embedded SARL. All rights reserved.
  *
  * This file is part of CycloneTCP Open.
  *
@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.2.2
+ * @version 2.4.0
  **/
 
 #ifndef _TFTP_COMMON_H
@@ -75,8 +75,10 @@ typedef enum
 } TftpErrorCode;
 
 
-//CodeWarrior or Win32 compiler?
-#if defined(__CWCC__) || defined(_WIN32)
+//CC-RX, CodeWarrior or Win32 compiler?
+#if defined(__CCRX__)
+   #pragma pack
+#elif defined(__CWCC__) || defined(_WIN32)
    #pragma pack(push, 1)
 #endif
 
@@ -85,61 +87,63 @@ typedef enum
  * @brief Read request packet (RRQ)
  **/
 
-typedef __start_packed struct
+typedef __packed_struct
 {
    uint16_t opcode;   //0-1
    char_t filename[]; //2
-} __end_packed TftpRrqPacket;
+} TftpRrqPacket;
 
 
 /**
  * @brief Write request packet (WRQ)
  **/
 
-typedef __start_packed struct
+typedef __packed_struct
 {
    uint16_t opcode;   //0-1
    char_t filename[]; //2
-} __end_packed TftpWrqPacket;
+} TftpWrqPacket;
 
 
 /**
  * @brief Data packet (DATA)
  **/
 
-typedef __start_packed struct
+typedef __packed_struct
 {
    uint16_t opcode; //0-1
    uint16_t block;  //2-3
    uint8_t data[];  //4
-} __end_packed TftpDataPacket;
+} TftpDataPacket;
 
 
 /**
  * @brief Acknowledgment packet (ACK)
  **/
 
-typedef __start_packed struct
+typedef __packed_struct
 {
    uint16_t opcode; //0-1
    uint16_t block;  //2-3
-} __end_packed TftpAckPacket;
+} TftpAckPacket;
 
 
 /**
  * @brief Error packet (ERROR)
  **/
 
-typedef __start_packed struct
+typedef __packed_struct
 {
    uint16_t opcode;    //0-1
    uint16_t errorCode; //2-3
    char_t errorMsg[];  //4
-} __end_packed TftpErrorPacket;
+} TftpErrorPacket;
 
 
-//CodeWarrior or Win32 compiler?
-#if defined(__CWCC__) || defined(_WIN32)
+//CC-RX, CodeWarrior or Win32 compiler?
+#if defined(__CCRX__)
+   #pragma unpack
+#elif defined(__CWCC__) || defined(_WIN32)
    #pragma pack(pop)
 #endif
 

@@ -6,7 +6,7 @@
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  *
- * Copyright (C) 2010-2023 Oryx Embedded SARL. All rights reserved.
+ * Copyright (C) 2010-2024 Oryx Embedded SARL. All rights reserved.
  *
  * This file is part of CycloneTCP Open.
  *
@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.2.2
+ * @version 2.4.0
  **/
 
 #ifndef _LLDP_EXT_MED_H
@@ -170,8 +170,10 @@ typedef enum
 } LldpMedPowerPriority;
 
 
-//CodeWarrior or Win32 compiler?
-#if defined(__CWCC__) || defined(_WIN32)
+//CC-RX, CodeWarrior or Win32 compiler?
+#if defined(__CCRX__)
+   #pragma pack
+#elif defined(__CWCC__) || defined(_WIN32)
    #pragma pack(push, 1)
 #endif
 
@@ -180,18 +182,18 @@ typedef enum
  * @brief LLDP-MED Capabilities TLV
  **/
 
-typedef __start_packed struct
+typedef __packed_struct
 {
    uint16_t capabilities; //0-1
    uint8_t deviceType;    //2
-} __end_packed LldpMedCapTlv;
+} LldpMedCapTlv;
 
 
 /**
  * @brief Network Policy TLV
  **/
 
-typedef __start_packed struct
+typedef __packed_struct
 {
 #if defined(_CPU_BIG_ENDIAN) && !defined(__ICCRX__)
    uint8_t appType;         //0
@@ -214,25 +216,25 @@ typedef __start_packed struct
    uint8_t dscpValue : 6;   //3
    uint8_t l2PriorityL : 2;
 #endif
-} __end_packed LldpMedNetworkPolicyTlv;
+} LldpMedNetworkPolicyTlv;
 
 
 /**
  * @brief Location Identification TLV
  **/
 
-typedef __start_packed struct
+typedef __packed_struct
 {
    uint8_t locationDataFormat; //0-1
    uint8_t locationId[];       //2
-} __end_packed LldpMedLocationIdTlv;
+} LldpMedLocationIdTlv;
 
 
 /**
  * @brief Extended Power-Via-MDI TLV
  **/
 
-typedef __start_packed struct
+typedef __packed_struct
 {
 #if defined(_CPU_BIG_ENDIAN) && !defined(__ICCRX__)
    uint8_t powerType : 2;     //0
@@ -245,11 +247,13 @@ typedef __start_packed struct
    uint8_t powerType : 2;
    uint16_t powerValue;       //1-2
 #endif
-} __end_packed LldpMedExtPowerViaMdiTlv;
+} LldpMedExtPowerViaMdiTlv;
 
 
-//CodeWarrior or Win32 compiler?
-#if defined(__CWCC__) || defined(_WIN32)
+//CC-RX, CodeWarrior or Win32 compiler?
+#if defined(__CCRX__)
+   #pragma unpack
+#elif defined(__CWCC__) || defined(_WIN32)
    #pragma pack(pop)
 #endif
 

@@ -6,7 +6,7 @@
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  *
- * Copyright (C) 2010-2023 Oryx Embedded SARL. All rights reserved.
+ * Copyright (C) 2010-2024 Oryx Embedded SARL. All rights reserved.
  *
  * This file is part of CycloneTCP Open.
  *
@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.2.2
+ * @version 2.4.0
  **/
 
 #ifndef _M487_ETH_DRIVER_H
@@ -134,7 +134,7 @@ typedef struct
    uint32_t txdes1;
    uint32_t txdes2;
    uint32_t txdes3;
-} Nuc472TxDmaDesc;
+} M487TxDmaDesc;
 
 
 /**
@@ -147,7 +147,7 @@ typedef struct
    uint32_t rxdes1;
    uint32_t rxdes2;
    uint32_t rxdes3;
-} Nuc472RxDmaDesc;
+} M487RxDmaDesc;
 
 
 //M487 Ethernet MAC driver

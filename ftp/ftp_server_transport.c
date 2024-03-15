@@ -6,7 +6,7 @@
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  *
- * Copyright (C) 2010-2023 Oryx Embedded SARL. All rights reserved.
+ * Copyright (C) 2010-2024 Oryx Embedded SARL. All rights reserved.
  *
  * This file is part of CycloneTCP Open.
  *
@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.2.2
+ * @version 2.4.0
  **/
 
 //Switch to the appropriate trace level
@@ -83,6 +83,12 @@ error_t ftpServerOpenSecureChannel(FtpServerContext *context,
 
 #if (TLS_TICKET_SUPPORT == ENABLED)
    //Enable session ticket mechanism
+   error = tlsEnableSessionTickets(channel->tlsContext, TRUE);
+   //Any error to report?
+   if(error)
+      return error;
+
+   //Register ticket encryption/decryption callbacks
    error = tlsSetTicketCallbacks(channel->tlsContext, tlsEncryptTicket,
       tlsDecryptTicket, &context->tlsTicketContext);
    //Any error to report?
@@ -125,9 +131,6 @@ error_t ftpServerEstablishSecureChannel(FtpServerChannel *channel)
    return ERROR_NOT_IMPLEMENTED;
 #endif
 }
-
-
-
 
 
 /**

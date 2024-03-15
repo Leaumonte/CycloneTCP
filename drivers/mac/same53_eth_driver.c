@@ -6,7 +6,7 @@
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  *
- * Copyright (C) 2010-2023 Oryx Embedded SARL. All rights reserved.
+ * Copyright (C) 2010-2024 Oryx Embedded SARL. All rights reserved.
  *
  * This file is part of CycloneTCP Open.
  *
@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.2.2
+ * @version 2.4.0
  **/
 
 //Switch to the appropriate trace level
@@ -197,8 +197,9 @@ error_t same53EthInit(NetInterface *interface)
       GMAC_IER_TCOMP_Msk | GMAC_IER_TFC_Msk | GMAC_IER_RLEX_Msk |
       GMAC_IER_TUR_Msk | GMAC_IER_RXUBR_Msk | GMAC_IER_RCOMP_Msk;
 
-   //Read GMAC ISR register to clear any pending interrupt
+   //Read GMAC_ISR register to clear any pending interrupt
    status = GMAC_REGS->GMAC_ISR;
+   (void) status;
 
    //Set priority grouping (3 bits for pre-emption priority, no bits for subpriority)
    NVIC_SetPriorityGrouping(SAME53_ETH_IRQ_PRIORITY_GROUPING);
@@ -447,6 +448,7 @@ void GMAC_Handler(void)
    isr = GMAC_REGS->GMAC_ISR;
    tsr = GMAC_REGS->GMAC_TSR;
    rsr = GMAC_REGS->GMAC_RSR;
+   (void) isr;
 
    //Packet transmitted?
    if((tsr & (GMAC_TSR_HRESP_Msk | GMAC_TSR_UND_Msk |
@@ -593,7 +595,7 @@ error_t same53EthSendPacket(NetInterface *interface,
 
 error_t same53EthReceivePacket(NetInterface *interface)
 {
-   static uint8_t temp[ETH_MAX_FRAME_SIZE];
+   static uint32_t temp[ETH_MAX_FRAME_SIZE / 4];
    error_t error;
    uint_t i;
    uint_t j;
@@ -603,7 +605,8 @@ error_t same53EthReceivePacket(NetInterface *interface)
    size_t size;
    size_t length;
 
-   //Initialize SOF and EOF indices
+   //Initialize variables
+   size = 0;
    sofIndex = UINT_MAX;
    eofIndex = UINT_MAX;
 
@@ -673,7 +676,7 @@ error_t same53EthReceivePacket(NetInterface *interface)
          //Calculate the number of bytes to read at a time
          n = MIN(size, SAME53_ETH_RX_BUFFER_SIZE);
          //Copy data from receive buffer
-         osMemcpy(temp + length, rxBuffer[rxBufferIndex], n);
+         osMemcpy((uint8_t *) temp + length, rxBuffer[rxBufferIndex], n);
          //Update byte counters
          length += n;
          size -= n;
@@ -701,7 +704,7 @@ error_t same53EthReceivePacket(NetInterface *interface)
       ancillary = NET_DEFAULT_RX_ANCILLARY;
 
       //Pass the packet to the upper layer
-      nicProcessPacket(interface, temp, length, &ancillary);
+      nicProcessPacket(interface, (uint8_t *) temp, length, &ancillary);
       //Valid packet received
       error = NO_ERROR;
    }

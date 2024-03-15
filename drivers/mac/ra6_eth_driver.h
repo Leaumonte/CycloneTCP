@@ -6,7 +6,7 @@
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  *
- * Copyright (C) 2010-2023 Oryx Embedded SARL. All rights reserved.
+ * Copyright (C) 2010-2024 Oryx Embedded SARL. All rights reserved.
  *
  * This file is part of CycloneTCP Open.
  *
@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.2.2
+ * @version 2.4.0
  **/
 
 #ifndef _RA6_ETH_DRIVER_H
@@ -88,9 +88,14 @@
    #define RA6_ETH_RAM_SECTION ".ns_buffer"
 #endif
 
-//Ethernet DMA Controller
+//Ethernet DMA controller
 #ifndef R_ETHERC_EDMAC
    #define R_ETHERC_EDMAC ((R_ETHERC_EDMAC_Type *) R_ETHERC_EDMAC_BASE)
+#endif
+
+//MSTPCRB15 bitfield
+#ifndef R_MSTP_MSTPCRB_MSTPB15_Msk
+   #define R_MSTP_MSTPCRB_MSTPB15_Msk (R_MSTP_MSTPCRB_MSTPB_Msk << 15)
 #endif
 
 //Transmit DMA descriptor flags

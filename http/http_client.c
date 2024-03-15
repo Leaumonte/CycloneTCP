@@ -6,7 +6,7 @@
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  *
- * Copyright (C) 2010-2023 Oryx Embedded SARL. All rights reserved.
+ * Copyright (C) 2010-2024 Oryx Embedded SARL. All rights reserved.
  *
  * This file is part of CycloneTCP Open.
  *
@@ -36,7 +36,7 @@
  * - RFC 7231: Hypertext Transfer Protocol (HTTP/1.1): Semantics and Content
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.2.2
+ * @version 2.4.0
  **/
 
 //Switch to the appropriate trace level
@@ -218,13 +218,12 @@ error_t httpClientSetAuthInfo(HttpClientContext *context,
    if(osStrlen(username) > HTTP_CLIENT_MAX_USERNAME_LEN)
       return ERROR_INVALID_LENGTH;
 
-   //Save user name
-   osStrcpy(context->authParams.username, username);
-
    //Make sure the length of the password is acceptable
    if(osStrlen(password) > HTTP_CLIENT_MAX_PASSWORD_LEN)
       return ERROR_INVALID_LENGTH;
 
+   //Save user name
+   osStrcpy(context->authParams.username, username);
    //Save password
    osStrcpy(context->authParams.password, password);
 
@@ -1811,7 +1810,7 @@ error_t httpClientReadBody(HttpClientContext *context, void *data,
                context->timestamp = osGetSystemTime();
 
                //Check flags
-               if((flags & HTTP_FLAG_BREAK_CRLF) != 0)
+               if((flags & HTTP_FLAG_BREAK_CHAR) != 0)
                {
                   //The HTTP_FLAG_BREAK_CHAR flag causes the function to stop
                   //reading data as soon as the specified break character is

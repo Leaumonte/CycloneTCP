@@ -6,7 +6,7 @@
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  *
- * Copyright (C) 2010-2023 Oryx Embedded SARL. All rights reserved.
+ * Copyright (C) 2010-2024 Oryx Embedded SARL. All rights reserved.
  *
  * This file is part of CycloneTCP Open.
  *
@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.2.2
+ * @version 2.4.0
  **/
 
 //Switch to the appropriate trace level
@@ -213,7 +213,7 @@ DnsCacheEntry *dnsFindEntry(NetInterface *interface,
          return entry;
    }
 
-   //No matching entry in the DNS cache...
+   //No matching entry in the DNS cache
    return NULL;
 }
 
@@ -313,27 +313,7 @@ void dnsTick(void)
             else if(entry->protocol == HOST_NAME_RESOLVER_DNS)
             {
                //Select the next DNS server
-               entry->dnsServerIndex++;
-               //Initialize retransmission counter
-               entry->retransmitCount = DNS_CLIENT_MAX_RETRIES;
-               //Send DNS query
-               error = dnsSendQuery(entry);
-
-               //DNS message successfully sent?
-               if(!error)
-               {
-                  //Save the time at which the query message was sent
-                  entry->timestamp = time;
-                  //Set timeout value
-                  entry->timeout = DNS_CLIENT_INIT_TIMEOUT;
-                  //Decrement retransmission counter
-                  entry->retransmitCount--;
-               }
-               else
-               {
-                  //The entry should be deleted since name resolution has failed
-                  dnsDeleteEntry(entry);
-               }
+               dnsSelectNextServer(entry);
             }
 #endif
             else

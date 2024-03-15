@@ -6,7 +6,7 @@
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  *
- * Copyright (C) 2010-2023 Oryx Embedded SARL. All rights reserved.
+ * Copyright (C) 2010-2024 Oryx Embedded SARL. All rights reserved.
  *
  * This file is part of CycloneTCP Open.
  *
@@ -25,7 +25,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  * @author Oryx Embedded SARL (www.oryx-embedded.com)
- * @version 2.2.2
+ * @version 2.4.0
  **/
 
 //Switch to the appropriate trace level
@@ -50,6 +50,11 @@
 
 void lldpGetDefaultSettings(LldpAgentSettings *settings)
 {
+   //Default task parameters
+   settings->task = OS_TASK_DEFAULT_PARAMS;
+   settings->task.stackSize = LLDP_TASK_STACK_SIZE;
+   settings->task.priority = LLDP_TASK_PRIORITY;
+
    //Use default interface
    settings->interface = netGetDefaultInterface();
 
@@ -110,6 +115,10 @@ error_t lldpInit(LldpAgentContext *context,
 
    //Clear the LLDP agent context
    osMemset(context, 0, sizeof(LldpAgentContext));
+
+   //Initialize task parameters
+   context->taskParams = settings->task;
+   context->taskId = OS_INVALID_TASK_ID;
 
    //Initialize LLDP agent context
    context->interface = settings->interface;
@@ -309,16 +318,9 @@ error_t lldpStart(LldpAgentContext *context)
       //Save current time
       context->timestamp = osGetSystemTime();
 
-#if (OS_STATIC_TASK_SUPPORT == ENABLED)
-      //Create a task using statically allocated memory
-      context->taskId = osCreateStaticTask("LLDP Agent",
-         (OsTaskCode) lldpTask, context, &context->taskTcb,
-         context->taskStack, LLDP_TASK_STACK_SIZE, LLDP_TASK_PRIORITY);
-#else
       //Create a task
       context->taskId = osCreateTask("LLDP Agent", (OsTaskCode) lldpTask,
-         context, LLDP_TASK_STACK_SIZE, LLDP_TASK_PRIORITY);
-#endif
+         context, &context->taskParams);
 
       //Failed to create task?
       if(context->taskId == OS_INVALID_TASK_ID)
@@ -340,7 +342,7 @@ error_t lldpStart(LldpAgentContext *context)
       //Remove the LLDP multicast address from the static MAC table
       lldpDropMulticastAddr(context);
 
-      //Close the UDP socket
+      //Close the raw socket
       socketClose(context->socket);
       context->socket = NULL;
    }
@@ -382,7 +384,7 @@ error_t lldpStop(LldpAgentContext *context)
       //Remove the LLDP multicast address from the static MAC table
       lldpDropMulticastAddr(context);
 
-      //Close the UDP socket
+      //Close the raw socket
       socketClose(context->socket);
       context->socket = NULL;
    }
@@ -1325,7 +1327,7 @@ void lldpTask(LldpAgentContext *context)
       //Maximum time to wait for an incoming datagram
       if((time - context->timestamp) < LLDP_TICK_INTERVAL)
       {
-         timeout = time + LLDP_TICK_INTERVAL - context->timestamp;
+         timeout = context->timestamp + LLDP_TICK_INTERVAL - time;
       }
       else
       {
